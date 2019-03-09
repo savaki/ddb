@@ -25,6 +25,19 @@ func example() {
   err := table.CreateTableIfNotExists(ctx)
   // handle err ...
   
+  record := Example {
+    PlayerID: "abc",
+    Date:     "2019-01-01",
+  }
+  err = table.Put(record).RunWithContext(ctx) 
+  // handle err ...
+  
+  var got Example
+  err = table.Get(String(record.PlayerID)).
+    Range(String(record.Date)).
+    ScanWithContext(ctx, &got)
+  // handle err ...
+  
   err = table.DeleteTableIfExists(ctx)
   // handle err ...
 }
