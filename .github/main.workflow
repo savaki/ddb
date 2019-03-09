@@ -19,7 +19,4 @@ action "coveralls" {
     "go get github.com/mattn/goveralls",
     "goveralls -repotoken ${COVERALLS_TOKEN}"
   ]
-  secrets = [
-    "COVERALLS_TOKEN"
-  ]
 }
