@@ -33,8 +33,8 @@ func example() {
   // handle err ...
   
   var got Example
-  err = table.Get(String(record.PlayerID)).
-    Range(String(record.Date)).
+  err = table.Get(String(record.PlayerID)). // with hash key
+    Range(String(record.Date)).             // and range key 
     ScanWithContext(ctx, &got)
   // handle err ...
   
