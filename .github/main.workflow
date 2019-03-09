@@ -1,7 +1,7 @@
 workflow "go test" {
   on = "push"
   resolves = [
-    "coveralls",
+    "coveralls"
   ]
 }
 
@@ -13,11 +13,11 @@ action "go test 1.12" {
 action "coveralls" {
   uses = "docker://golang:1.11"
   needs = [
-    "go test 1.12",
+    "go test 1.12"
   ]
   runs = [
-    "go get github.com/mattn/goveralls",
-    "goveralls -repotoken ${COVERALLS_TOKEN}",
+    "sh",
+    "-c",
+    "go get github.com/mattn/goveralls; goveralls -repotoken ${COVERALLS_TOKEN}",
   ]
-  secrets = ["COVERALLS_TOKEN"]
 }
