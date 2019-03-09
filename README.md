@@ -44,7 +44,7 @@ records to and from structs.
 Use the `hash_key` tag to define the hash (e.g. partition) key. 
 
 ```golang
-type Table struct {
+type Example struct {
   ID string `ddb:"hash_key"`
 }
 ```
@@ -54,7 +54,7 @@ type Table struct {
 Use the `range_key` tag to define the range (e.g. sort) key. 
 
 ```golang
-type Table struct {
+type Example struct {
   ID   string `ddb:"hash_key"`
   Date string `ddb:"range_key"`
 }
@@ -72,7 +72,7 @@ In this example, we define a local secondary index with index name, `blah`, whos
 range key is `Alt` that includes `Field1`.
 
 ```golang
-type Table struct {
+type Example struct {
   ID     string `ddb:"hash_key"`
   Date   string `ddb:"range_key"`
   Alt    string `ddb:"lsi_range:blah"`
@@ -94,9 +94,20 @@ In this example, we define a global secondary index with index name, `blah`, who
 hash key is `VerifiedAt` and whose range key is `ID`.
 
 ```golang
-type Table struct {
+type Example struct {
   ID         string `ddb:"hash_key;gsi_range:blah"`
   Date       string `ddb:"range_key"`
   VerifiedAt int64  `ddb:"gsi_hash:blah"`
+}
+```
+
+#### Using `dynamodbav` to specify attribute values
+
+This example illustrates using the `dynamodbav` in conjunction with the `ddb` to 
+define the schema.  Here the hash key of the table will be set to `id` (not `ID`) 
+
+```golang
+type Example struct {
+  ID string `ddb:"hash_key" dynamodbav:"id"`
 }
 ```
