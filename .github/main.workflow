@@ -6,6 +6,6 @@ workflow "go test" {
 }
 
 action "go test 1.12" {
-  uses = "golang:1.12"
+  uses = "docker://golang:1.12"
   runs = "go test ./... -cover"
 }
