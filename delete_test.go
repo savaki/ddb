@@ -47,4 +47,15 @@ func TestDeleteTable(t *testing.T) {
 			t.Fatalf("got %v; want nil", err)
 		}
 	})
+
+	t.Run("other error", func(t *testing.T) {
+		mock := &Mock{
+			err: awserr.New(dynamodb.ErrCodeConditionalCheckFailedException, "boom", nil),
+		}
+		table := New(mock).MustTable(tableName, Example{})
+		err := table.DeleteTableIfExists(ctx)
+		if err == nil {
+			t.Fatalf("got %v; want not nil", err)
+		}
+	})
 }

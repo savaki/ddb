@@ -3,6 +3,7 @@ package ddb
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -17,7 +18,7 @@ type Get struct {
 	hashKey        Value
 	rangeKey       Value
 	consistentRead bool
-	consumed       *consumedCapacity
+	consumed       *ConsumedCapacity
 }
 
 func (g *Get) Range(value Value) *Get {
@@ -79,6 +80,8 @@ func String(v string) Value {
 	}
 }
 
-func Int64Value(v int64) Value {
-	return Value{}
+func Int64(v int64) Value {
+	return Value{
+		item: &dynamodb.AttributeValue{N: aws.String(strconv.FormatInt(v, 10))},
+	}
 }

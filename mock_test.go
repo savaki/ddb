@@ -40,10 +40,19 @@ func (m *Mock) GetItemWithContext(ctx aws.Context, input *dynamodb.GetItemInput,
 		return nil, err
 	}
 
-	return &dynamodb.GetItemOutput{Item: item}, nil
+	return &dynamodb.GetItemOutput{
+		Item: item,
+		ConsumedCapacity: &dynamodb.ConsumedCapacity{
+			ReadCapacityUnits: aws.Float64(1),
+		},
+	}, nil
 }
 
 func (m *Mock) PutItemWithContext(ctx aws.Context, input *dynamodb.PutItemInput, opts ...request.Option) (*dynamodb.PutItemOutput, error) {
 	m.putInput = input
-	return &dynamodb.PutItemOutput{}, nil
+	return &dynamodb.PutItemOutput{
+		ConsumedCapacity: &dynamodb.ConsumedCapacity{
+			WriteCapacityUnits: aws.Float64(1),
+		},
+	}, nil
 }

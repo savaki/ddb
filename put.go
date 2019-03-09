@@ -13,7 +13,7 @@ type Put struct {
 	api      dynamodbiface.DynamoDBAPI
 	spec     *tableSpec
 	value    interface{}
-	consumed *consumedCapacity
+	consumed *ConsumedCapacity
 }
 
 func (p *Put) RunWithContext(ctx context.Context) error {

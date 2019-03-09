@@ -39,6 +39,13 @@ type LSI struct {
 	Hello    string `ddb:"lsi:index"       dynamodbav:"hello"`
 }
 
+type LSIKeysOnly struct {
+	Hash     string `ddb:"hash_key"`
+	Range    int64  `ddb:"range_key"`
+	AltRange int64  `ddb:"lsi_range:index,keys_only" dynamodbav:"alt"`
+	Hello    string
+}
+
 type GSI struct {
 	Hash     string `ddb:"hash_key"`
 	Range    int64  `ddb:"range_key"`
@@ -95,6 +102,16 @@ func Test_makeCreateTableInput(t *testing.T) {
 
 		got := makeCreateTableInput(tableName, lsi) //WithLocalSecondaryIndex(indexName, projectionType, WithAttr(attributeName, dynamodb.ScalarAttributeTypeS)),
 		assertEqual(t, got, "testdata/lsi.json")
+	})
+
+	t.Run("lsi, keys only", func(t *testing.T) {
+		lsi, err := inspect("example", LSIKeysOnly{})
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+
+		got := makeCreateTableInput(tableName, lsi) //WithLocalSecondaryIndex(indexName, projectionType, WithAttr(attributeName, dynamodb.ScalarAttributeTypeS)),
+		assertEqual(t, got, "testdata/lsi_keys_only.json")
 	})
 
 	t.Run("gsi", func(t *testing.T) {

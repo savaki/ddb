@@ -25,20 +25,27 @@ import (
 
 var defaultContext = context.Background()
 
-type consumedCapacity struct {
-	readUnits  int64
-	writeUnits int64
+type ConsumedCapacity struct {
+	ReadUnits  int64
+	WriteUnits int64
 }
 
-func (c *consumedCapacity) add(in *dynamodb.ConsumedCapacity) {
+func (c *ConsumedCapacity) safeClone() ConsumedCapacity {
+	return ConsumedCapacity{
+		ReadUnits:  atomic.LoadInt64(&c.ReadUnits),
+		WriteUnits: atomic.LoadInt64(&c.WriteUnits),
+	}
+}
+
+func (c *ConsumedCapacity) add(in *dynamodb.ConsumedCapacity) {
 	if in == nil {
 		return
 	}
 	if rcu := in.ReadCapacityUnits; rcu != nil && *rcu > 0 {
-		atomic.AddInt64(&c.readUnits, int64(*rcu))
+		atomic.AddInt64(&c.ReadUnits, int64(*rcu))
 	}
 	if wcu := in.WriteCapacityUnits; wcu != nil && *wcu > 0 {
-		atomic.AddInt64(&c.writeUnits, int64(*wcu))
+		atomic.AddInt64(&c.WriteUnits, int64(*wcu))
 	}
 }
 
@@ -46,7 +53,11 @@ type Table struct {
 	ddb       *DDB
 	spec      *tableSpec
 	tableName string
-	consumed  *consumedCapacity
+	consumed  *ConsumedCapacity
+}
+
+func (t *Table) ConsumedCapacity() ConsumedCapacity {
+	return t.consumed.safeClone()
 }
 
 func (t *Table) DDB() *DDB {
@@ -67,7 +78,7 @@ func (d *DDB) Table(tableName string, model interface{}) (*Table, error) {
 		ddb:       d,
 		spec:      spec,
 		tableName: tableName,
-		consumed:  &consumedCapacity{},
+		consumed:  &ConsumedCapacity{},
 	}, nil
 }
 

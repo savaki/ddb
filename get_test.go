@@ -19,24 +19,31 @@ type GetExample struct {
 
 func TestGet_One(t *testing.T) {
 	var (
-		ctx   = context.Background()
 		want  = GetExample{ID: "abc"}
 		mock  = &Mock{getItem: want}
 		table = New(mock).MustTable("example", GetExample{})
 	)
 
-	err := table.Put(want).RunWithContext(ctx)
+	err := table.Put(want).Run()
 	if err != nil {
 		t.Fatalf("got %v; want nil", err)
 	}
 
 	var got GetExample
-	err = table.Get(String("abc")).ScanWithContext(ctx, &got)
+	err = table.Get(String("abc")).Scan(&got)
 	if err != nil {
 		t.Fatalf("got %v; want nil", err)
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %#v; want %#v", got, want)
+	}
+
+	consumed := table.ConsumedCapacity()
+	if got, want := consumed.ReadUnits, int64(1); got != want {
+		t.Fatalf("got %v; want %v", got, want)
+	}
+	if got, want := consumed.WriteUnits, int64(1); got != want {
+		t.Fatalf("got %v; want %v", got, want)
 	}
 }
 
@@ -62,7 +69,7 @@ func TestLive(t *testing.T) {
 		t.Fatalf("got %v; want nil", err)
 	}
 
-	err = table.Put(want).RunWithContext(ctx)
+	err = table.Put(want).Run()
 	if err != nil {
 		t.Fatalf("got %v; want nil", err)
 	}
@@ -74,6 +81,29 @@ func TestLive(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %v; want %v", got, want)
+	}
+}
+
+func TestInt64Value(t *testing.T) {
+	value := Int64(123)
+	if value.item == nil {
+		t.Fatalf("got nil; want not nil")
+	}
+	if got, want := *value.item.N, "123"; got != want {
+		t.Fatalf("got %v; want %v", got, want)
+	}
+}
+
+func TestGet_Range(t *testing.T) {
+	want := "abc"
+	g := &Get{}
+	g.Range(String(want))
+
+	if got := g.rangeKey.item; got == nil {
+		t.Fatalf("got nil; want not nil")
+	}
+	if got := *g.rangeKey.item.S; got != want {
 		t.Fatalf("got %v; want %v", got, want)
 	}
 }
