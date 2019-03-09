@@ -15,15 +15,38 @@
 package ddb
 
 import (
+	"context"
 	"fmt"
+	"sync/atomic"
 
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 )
+
+var defaultContext = context.Background()
+
+type consumedCapacity struct {
+	readUnits  int64
+	writeUnits int64
+}
+
+func (c *consumedCapacity) add(in *dynamodb.ConsumedCapacity) {
+	if in == nil {
+		return
+	}
+	if rcu := in.ReadCapacityUnits; rcu != nil && *rcu > 0 {
+		atomic.AddInt64(&c.readUnits, int64(*rcu))
+	}
+	if wcu := in.WriteCapacityUnits; wcu != nil && *wcu > 0 {
+		atomic.AddInt64(&c.writeUnits, int64(*wcu))
+	}
+}
 
 type Table struct {
 	ddb       *DDB
 	spec      *tableSpec
 	tableName string
+	consumed  *consumedCapacity
 }
 
 func (t *Table) DDB() *DDB {
@@ -35,7 +58,7 @@ type DDB struct {
 }
 
 func (d *DDB) Table(tableName string, model interface{}) (*Table, error) {
-	spec, err := inspect(model)
+	spec, err := inspect(tableName, model)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create Table: %v", err)
 	}
@@ -44,6 +67,7 @@ func (d *DDB) Table(tableName string, model interface{}) (*Table, error) {
 		ddb:       d,
 		spec:      spec,
 		tableName: tableName,
+		consumed:  &consumedCapacity{},
 	}, nil
 }
 

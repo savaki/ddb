@@ -26,7 +26,7 @@ type Model struct {
 }
 
 func TestInspect(t *testing.T) {
-	spec, err := inspect(Model{})
+	spec, err := inspect("example", Model{})
 	if err != nil {
 		t.Fatalf("got %v; want nil", err)
 	}

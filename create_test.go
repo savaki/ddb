@@ -23,11 +23,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 )
 
 type Sample struct {
@@ -53,7 +50,7 @@ type GSI struct {
 func Test_makeCreateTableInput(t *testing.T) {
 	const tableName = "blah"
 
-	spec, err := inspect(Sample{})
+	spec, err := inspect(tableName, Sample{})
 	if err != nil {
 		t.Fatalf("got %v; want nil", err)
 	}
@@ -91,7 +88,7 @@ func Test_makeCreateTableInput(t *testing.T) {
 	})
 
 	t.Run("lsi", func(t *testing.T) {
-		lsi, err := inspect(LSI{})
+		lsi, err := inspect("example", LSI{})
 		if err != nil {
 			t.Fatalf("got %v; want nil", err)
 		}
@@ -101,7 +98,7 @@ func Test_makeCreateTableInput(t *testing.T) {
 	})
 
 	t.Run("gsi", func(t *testing.T) {
-		gsi, err := inspect(GSI{})
+		gsi, err := inspect("example", GSI{})
 		if err != nil {
 			t.Fatalf("got %v; want nil", err)
 		}
@@ -143,19 +140,6 @@ func prettyJSON(v interface{}) string {
 	encoder.SetIndent("", "  ")
 	_ = encoder.Encode(v)
 	return buf.String()
-}
-
-type Mock struct {
-	dynamodbiface.DynamoDBAPI
-	err error
-}
-
-func (m *Mock) CreateTableWithContext(aws.Context, *dynamodb.CreateTableInput, ...request.Option) (*dynamodb.CreateTableOutput, error) {
-	return &dynamodb.CreateTableOutput{}, m.err
-}
-
-func (m *Mock) DeleteTableWithContext(aws.Context, *dynamodb.DeleteTableInput, ...request.Option) (*dynamodb.DeleteTableOutput, error) {
-	return &dynamodb.DeleteTableOutput{}, m.err
 }
 
 type Example struct {

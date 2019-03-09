@@ -99,7 +99,7 @@ func (spec *tableSpec) gsi(indexName string) *indexSpec {
 	return gsi
 }
 
-func inspect(model interface{}) (*tableSpec, error) {
+func inspect(tableName string, model interface{}) (*tableSpec, error) {
 	t, v := reflect.TypeOf(model), reflect.ValueOf(model)
 	if t.Kind() == reflect.Ptr {
 		t, v = t.Elem(), v.Elem()
@@ -108,7 +108,9 @@ func inspect(model interface{}) (*tableSpec, error) {
 		return nil, fmt.Errorf("models must be structs.  %v is not a struct", t.String())
 	}
 
-	var spec tableSpec
+	spec := tableSpec{
+		TableName: tableName,
+	}
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 
