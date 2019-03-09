@@ -1,0 +1,75 @@
+{
+  "AttributeDefinitions": [
+    {
+      "AttributeName": "Hash",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "Range",
+      "AttributeType": "N"
+    },
+    {
+      "AttributeName": "h",
+      "AttributeType": "N"
+    },
+    {
+      "AttributeName": "r",
+      "AttributeType": "N"
+    },
+    {
+      "AttributeName": "hello",
+      "AttributeType": "S"
+    }
+  ],
+  "BillingMode": "PROVISIONED",
+  "GlobalSecondaryIndexes": [
+    {
+      "IndexName": "ndex",
+      "KeySchema": [
+        {
+          "AttributeName": "h",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "NonKeyAttributes": null,
+        "ProjectionType": "ALL"
+      },
+      "ProvisionedThroughput": null
+    },
+    {
+      "IndexName": "index",
+      "KeySchema": [
+        {
+          "AttributeName": "r",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "NonKeyAttributes": [
+          "hello"
+        ],
+        "ProjectionType": "INCLUDE"
+      },
+      "ProvisionedThroughput": null
+    }
+  ],
+  "KeySchema": [
+    {
+      "AttributeName": "Hash",
+      "KeyType": "HASH"
+    },
+    {
+      "AttributeName": "Range",
+      "KeyType": "RANGE"
+    }
+  ],
+  "LocalSecondaryIndexes": null,
+  "ProvisionedThroughput": {
+    "ReadCapacityUnits": 3,
+    "WriteCapacityUnits": 3
+  },
+  "SSESpecification": null,
+  "StreamSpecification": null,
+  "TableName": "blah"
+}
