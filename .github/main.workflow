@@ -18,7 +18,7 @@ action "coveralls" {
   runs = [
     "sh",
     "-c",
-    "go get github.com/mattn/goveralls; goveralls -repotoken ${COVERALLS_TOKEN}",
+    "(cd /tmp; go get github.com/mattn/goveralls); goveralls -repotoken ${COVERALLS_TOKEN}",
   ]
   secrets = ["COVERALLS_TOKEN"]
 }
