@@ -1,7 +1,7 @@
 workflow "go test" {
   on = "push"
   resolves = [
-    "coveralls",
+    "go test 1.12",
   ]
 }
 
