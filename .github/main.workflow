@@ -7,18 +7,13 @@ workflow "go test" {
 
 action "go test 1.12" {
   uses = "docker://golang:1.12"
-  runs = "go test ./... -cover"
-}
-
-action "coveralls" {
-  uses = "docker://golang:1.11"
-  needs = [
-    "go test 1.12",
-  ]
   runs = [
     "sh",
     "-c",
-    "(cd /; go get github.com/mattn/goveralls); goveralls -repotoken ${COVERALLS_TOKEN}",
+    "go test ./... -cover -race -coverprofile=/tmp/coverage.out; (cd /; go get github.com/mattn/goveralls); goveralls -coverprofile=/tmp/coverage.out -repotoken ${COVERALLS_TOKEN}"
   ]
-  secrets = ["COVERALLS_TOKEN"]
+  secrets = [
+    "COVERALLS_TOKEN"
+  ]
 }
+
