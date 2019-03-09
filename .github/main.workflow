@@ -1,9 +1,11 @@
-workflow "New workflow" {
+workflow "test" {
   on = "push"
-  resolves = ["GitHub Action for Docker"]
+  resolves = [
+    "go test 1.12"
+  ]
 }
 
-action "GitHub Action for Docker" {
+action "go test 1.12" {
   uses = "actions/docker/cli@8cdf801b322af5f369e00d85e9cf3a7122f49108"
-  runs = "ls -al"
+  runs = "docker ps"
 }
