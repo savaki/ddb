@@ -1,7 +1,7 @@
 workflow "go test" {
   on = "push"
   resolves = [
-    "go test"
+    "1.12"
   ]
 }
 
