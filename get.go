@@ -13,7 +13,6 @@ import (
 
 type Get struct {
 	api            dynamodbiface.DynamoDBAPI
-	ctx            context.Context
 	spec           *tableSpec
 	hashKey        Value
 	rangeKey       Value
