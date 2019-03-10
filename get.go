@@ -2,7 +2,6 @@ package ddb
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -20,6 +19,16 @@ type Get struct {
 	consumed       *ConsumedCapacity
 }
 
+func (g *Get) makeGetItemInput() *dynamodb.GetItemInput {
+	key := makeKey(g.spec, g.hashKey, g.rangeKey)
+	return &dynamodb.GetItemInput{
+		ConsistentRead:         aws.Bool(g.consistentRead),
+		Key:                    key,
+		TableName:              aws.String(g.spec.TableName),
+		ReturnConsumedCapacity: aws.String(dynamodb.ReturnConsumedCapacityTotal),
+	}
+}
+
 func (g *Get) Range(value Value) *Get {
 	g.rangeKey = value
 	return g
@@ -31,22 +40,15 @@ func (g *Get) ConsistentRead(enabled bool) *Get {
 }
 
 func (g *Get) ScanWithContext(ctx context.Context, v interface{}) error {
-	key := makeKey(g.spec, g.hashKey, g.rangeKey)
-	input := dynamodb.GetItemInput{
-		ConsistentRead:         aws.Bool(g.consistentRead),
-		Key:                    key,
-		TableName:              aws.String(g.spec.TableName),
-		ReturnConsumedCapacity: aws.String(dynamodb.ReturnConsumedCapacityTotal),
-	}
-
-	output, err := g.api.GetItemWithContext(ctx, &input)
+	input := g.makeGetItemInput()
+	output, err := g.api.GetItemWithContext(ctx, input)
 	if err != nil {
-		return fmt.Errorf("GetItem failed: %v", err)
+		return err
 	}
 
 	g.consumed.add(output.ConsumedCapacity)
 	if len(output.Item) == 0 {
-		return nil
+		return errorf(ErrItemNotFound, "item not found")
 	}
 
 	if err := dynamodbattribute.UnmarshalMap(output.Item, v); err != nil {

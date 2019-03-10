@@ -39,9 +39,13 @@ func (m *Mock) DeleteTableWithContext(aws.Context, *dynamodb.DeleteTableInput, .
 func (m *Mock) GetItemWithContext(ctx aws.Context, input *dynamodb.GetItemInput, opts ...request.Option) (*dynamodb.GetItemOutput, error) {
 	m.getInput = input
 
-	item, err := dynamodbattribute.MarshalMap(m.getItem)
-	if err != nil {
-		return nil, err
+	var item map[string]*dynamodb.AttributeValue
+	if m.getItem != nil {
+		v, err := dynamodbattribute.MarshalMap(m.getItem)
+		if err != nil {
+			return nil, err
+		}
+		item = v
 	}
 
 	return &dynamodb.GetItemOutput{
