@@ -86,3 +86,9 @@ func Int64(v int64) Value {
 		item: &dynamodb.AttributeValue{N: aws.String(strconv.FormatInt(v, 10))},
 	}
 }
+
+func Raw(item *dynamodb.AttributeValue) Value {
+	return Value{
+		item: item,
+	}
+}

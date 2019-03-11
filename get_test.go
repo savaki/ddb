@@ -151,3 +151,11 @@ func TestGet_ConsistentRead(t *testing.T) {
 		t.Fatalf("got false; expected true")
 	}
 }
+
+func TestRaw(t *testing.T) {
+	item := &dynamodb.AttributeValue{S: aws.String("world")}
+	raw := Raw(item)
+	if raw.item != item {
+		t.Fatalf("got %v; want %v", raw.item, item)
+	}
+}

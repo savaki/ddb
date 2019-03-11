@@ -19,13 +19,14 @@ func init() {
 
 type Mock struct {
 	dynamodbiface.DynamoDBAPI
-	mutex     sync.Mutex
-	err       error
-	getItem   interface{}
-	scanItems []interface{}
-	getInput  *dynamodb.GetItemInput
-	putInput  *dynamodb.PutItemInput
-	scanInput *dynamodb.ScanInput
+	mutex       sync.Mutex
+	err         error
+	getItem     interface{}
+	scanItems   []interface{}
+	getInput    *dynamodb.GetItemInput
+	putInput    *dynamodb.PutItemInput
+	scanInput   *dynamodb.ScanInput
+	updateInput *dynamodb.UpdateItemInput
 }
 
 func (m *Mock) CreateTableWithContext(aws.Context, *dynamodb.CreateTableInput, ...request.Option) (*dynamodb.CreateTableOutput, error) {
@@ -88,4 +89,13 @@ func (m *Mock) ScanWithContext(ctx aws.Context, input *dynamodb.ScanInput, opts 
 	}
 
 	return &output, m.err
+}
+
+func (m *Mock) UpdateItemWithContext(ctx aws.Context, input *dynamodb.UpdateItemInput, opts ...request.Option) (*dynamodb.UpdateItemOutput, error) {
+	m.updateInput = input
+	return &dynamodb.UpdateItemOutput{
+		ConsumedCapacity: &dynamodb.ConsumedCapacity{
+			WriteCapacityUnits: aws.Float64(1),
+		},
+	}, nil
 }

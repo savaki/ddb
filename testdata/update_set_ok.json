@@ -1,0 +1,54 @@
+{
+  "AttributeUpdates": null,
+  "ConditionExpression": null,
+  "ConditionalOperator": null,
+  "Expected": null,
+  "ExpressionAttributeNames": {
+    "#A": "a"
+  },
+  "ExpressionAttributeValues": {
+    ":field1": {
+      "B": null,
+      "BOOL": null,
+      "BS": null,
+      "L": null,
+      "M": null,
+      "N": "123",
+      "NS": null,
+      "NULL": null,
+      "S": null,
+      "SS": null
+    }
+  },
+  "Key": {
+    "Date": {
+      "B": null,
+      "BOOL": null,
+      "BS": null,
+      "L": null,
+      "M": null,
+      "N": null,
+      "NS": null,
+      "NULL": null,
+      "S": "world",
+      "SS": null
+    },
+    "ID": {
+      "B": null,
+      "BOOL": null,
+      "BS": null,
+      "L": null,
+      "M": null,
+      "N": null,
+      "NS": null,
+      "NULL": null,
+      "S": "hello",
+      "SS": null
+    }
+  },
+  "ReturnConsumedCapacity": "TOTAL",
+  "ReturnItemCollectionMetrics": null,
+  "ReturnValues": null,
+  "TableName": "example",
+  "UpdateExpression": "Set #A = :field1"
+}

@@ -44,3 +44,13 @@ func TestBaseError_Message(t *testing.T) {
 		t.Fatalf("got %v; want %v", got, want)
 	}
 }
+
+func TestIsMismatchedValueCount(t *testing.T) {
+	table := New(nil).MustTable("example", UpdateTable{})
+	update := table.Update(String("hello"))
+	update.Set("#a = ?, #b = ?", Int64(123))
+	err := update.Run()
+	if !IsMismatchedValueCountError(err) {
+		t.Fatalf("got %v; want MismatchedValueCount", err)
+	}
+}

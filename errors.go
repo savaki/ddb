@@ -5,7 +5,9 @@ import (
 )
 
 const (
-	ErrItemNotFound = "ItemNotFound"
+	ErrInvalidFieldName     = "InvalidFieldName"
+	ErrItemNotFound         = "ItemNotFound"
+	ErrMismatchedValueCount = "MismatchedValueCount"
 )
 
 // Error provides a unified error definition that includes a code and message
@@ -40,6 +42,14 @@ func hasError(err error, code string) bool {
 // IsItemNotFoundError returns true if any error in the cause change contains the code, ErrItemNotFound
 func IsItemNotFoundError(err error) bool {
 	return hasError(err, ErrItemNotFound)
+}
+
+func IsMismatchedValueCountError(err error) bool {
+	return hasError(err, ErrMismatchedValueCount)
+}
+
+func IsInvalidFieldNameError(err error) bool {
+	return hasError(err, ErrInvalidFieldName)
 }
 
 type baseError struct {
