@@ -40,6 +40,11 @@ func (d *Delete) Condition(expr string, values ...interface{}) *Delete {
 	return d
 }
 
+func (d *Delete) Range(rangeKey interface{}) *Delete {
+	d.rangeKey = rangeKey
+	return d
+}
+
 func (d *Delete) RunWithContext(ctx context.Context) error {
 	key, err := makeKey(d.spec, d.hashKey, d.rangeKey)
 	if err != nil {

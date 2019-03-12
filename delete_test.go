@@ -23,19 +23,20 @@ import (
 
 type DeleteTable struct {
 	ID    string `ddb:"hash"`
+	Date  string `ddb:"range"`
 	Field int
 }
 
 func TestDelete_Condition(t *testing.T) {
 	t.Run("single", func(t *testing.T) {
 		var (
-			item  = DeleteTable{ID: "abc"}
+			item  = DeleteTable{ID: "abc", Date: "2006-01-02"}
 			mock  = &Mock{}
 			db    = New(mock)
 			table = db.MustTable("example", DeleteTable{})
 		)
 
-		del := table.Delete(item.ID)
+		del := table.Delete(item.ID).Range(item.Date)
 		del.Condition("#ID != ?", "def")
 		err := del.Run()
 		if err != nil {

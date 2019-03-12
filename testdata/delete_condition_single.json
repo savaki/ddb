@@ -20,6 +20,18 @@
     }
   },
   "Key": {
+    "Date": {
+      "B": null,
+      "BOOL": null,
+      "BS": null,
+      "L": null,
+      "M": null,
+      "N": null,
+      "NS": null,
+      "NULL": null,
+      "S": "2006-01-02",
+      "SS": null
+    },
     "ID": {
       "B": null,
       "BOOL": null,

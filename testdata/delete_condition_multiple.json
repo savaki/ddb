@@ -32,6 +32,18 @@
     }
   },
   "Key": {
+    "Date": {
+      "B": null,
+      "BOOL": null,
+      "BS": null,
+      "L": null,
+      "M": null,
+      "N": null,
+      "NS": null,
+      "NULL": true,
+      "S": null,
+      "SS": null
+    },
     "ID": {
       "B": null,
       "BOOL": null,
@@ -50,3 +62,4 @@
   "ReturnValues": null,
   "TableName": "example"
 }
+            
