@@ -22,15 +22,3 @@ func TestTable_DDB(t *testing.T) {
 		t.Fatalf("got %v; want %v", got, want)
 	}
 }
-
-type InvalidModel struct {
-	ID struct{} `ddb:"hash"` // struct{} is an invalid key
-}
-
-func TestTable_ConsumedCapacity(t *testing.T) {
-	db := New(nil)
-	_, err := db.Table("blah", InvalidModel{})
-	if err == nil {
-		t.Fatalf("got nil; want not nil")
-	}
-}

@@ -114,10 +114,7 @@ func inspect(tableName string, model interface{}) (*tableSpec, error) {
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 
-		attr, ok, err := getAttributeSpec(field)
-		if err != nil {
-			return nil, fmt.Errorf("unable to inspect field, %v: %v", field.Name, err)
-		}
+		attr, ok := getAttributeSpec(field)
 		if !ok {
 			continue
 		}
@@ -214,7 +211,7 @@ func hasTagOption(tag, option string) bool {
 	return false
 }
 
-func getAttributeSpec(field reflect.StructField) (*attributeSpec, bool, error) {
+func getAttributeSpec(field reflect.StructField) (*attributeSpec, bool) {
 	var (
 		attributeName = field.Name
 		attributeType string
@@ -223,7 +220,7 @@ func getAttributeSpec(field reflect.StructField) (*attributeSpec, bool, error) {
 	if v, ok := field.Tag.Lookup("dynamodbav"); ok {
 		v = strings.TrimSpace(v)
 		if strings.HasPrefix(v, "-") {
-			return nil, false, nil
+			return nil, false
 		}
 		segments := strings.Split(v, ",")
 		attributeName = strings.TrimSpace(segments[0])
@@ -237,12 +234,12 @@ func getAttributeSpec(field reflect.StructField) (*attributeSpec, bool, error) {
 	case reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		attributeType = dynamodb.ScalarAttributeTypeN
 	default:
-		return nil, false, fmt.Errorf("unhandled kind, %v", kind)
+		attributeType = "Unknown"
 	}
 
 	return &attributeSpec{
 		FieldName:     field.Name,
 		AttributeName: attributeName,
 		AttributeType: attributeType,
-	}, true, nil
+	}, true
 }
