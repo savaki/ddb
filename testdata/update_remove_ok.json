@@ -4,35 +4,9 @@
   "ConditionalOperator": null,
   "Expected": null,
   "ExpressionAttributeNames": {
-    "#A": "a",
-    "#B": "b"
+    "#Count": "Count"
   },
-  "ExpressionAttributeValues": {
-    ":f1": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": "123",
-      "NS": null,
-      "NULL": null,
-      "S": null,
-      "SS": null
-    },
-    ":f2": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": "456",
-      "NS": null,
-      "NULL": null,
-      "S": null,
-      "SS": null
-    }
-  },
+  "ExpressionAttributeValues": null,
   "Key": {
     "Date": {
       "B": null,
@@ -63,5 +37,5 @@
   "ReturnItemCollectionMetrics": null,
   "ReturnValues": null,
   "TableName": "example",
-  "UpdateExpression": "Set #A = :f1, #B = :f2"
+  "UpdateExpression": "Remove #Count"
 }

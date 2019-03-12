@@ -1,0 +1,39 @@
+{
+  "ConditionExpression": "attribute_not_exists(#Field)",
+  "ConditionalOperator": null,
+  "Expected": null,
+  "ExpressionAttributeNames": {
+    "#Field": "Field"
+  },
+  "ExpressionAttributeValues": null,
+  "Item": {
+    "Field": {
+      "B": null,
+      "BOOL": null,
+      "BS": null,
+      "L": null,
+      "M": null,
+      "N": null,
+      "NS": null,
+      "NULL": true,
+      "S": null,
+      "SS": null
+    },
+    "ID": {
+      "B": null,
+      "BOOL": null,
+      "BS": null,
+      "L": null,
+      "M": null,
+      "N": null,
+      "NS": null,
+      "NULL": null,
+      "S": "abc",
+      "SS": null
+    }
+  },
+  "ReturnConsumedCapacity": null,
+  "ReturnItemCollectionMetrics": null,
+  "ReturnValues": null,
+  "TableName": "example"
+}

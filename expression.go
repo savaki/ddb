@@ -2,7 +2,6 @@ package ddb
 
 import (
 	"bytes"
-	"io"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -24,10 +23,11 @@ type expression struct {
 	values     map[string]*dynamodb.AttributeValue
 	index      int64
 
-	adds    *bytes.Buffer
-	deletes *bytes.Buffer
-	removes *bytes.Buffer
-	sets    *bytes.Buffer
+	adds       *bytes.Buffer
+	conditions *bytes.Buffer
+	deletes    *bytes.Buffer
+	removes    *bytes.Buffer
+	sets       *bytes.Buffer
 }
 
 func (e *expression) setExpressionAttributeName(name string) (string, error) {
@@ -58,59 +58,63 @@ func (e *expression) setExpressionAttributeValue(item *dynamodb.AttributeValue) 
 	}
 
 	id := atomic.AddInt64(&e.index, 1)
-	name := ":field" + strconv.FormatInt(id, 10)
+	name := ":f" + strconv.FormatInt(id, 10)
 	e.values[name] = item
 
 	return name
 }
 
-func (e *expression) String() string {
-	size := e.Size()
-	buf := bytes.NewBuffer(make([]byte, 0, size))
+func (e *expression) UpdateExpression() *string {
+	padding := 3
+	size := 0
+	if e.adds != nil {
+		size += e.adds.Len() + padding
+	}
+	if e.deletes != nil {
+		size += e.deletes.Len() + padding
+	}
+	if e.removes != nil {
+		size += e.removes.Len() + padding
+	}
+	if e.sets != nil {
+		size += e.sets.Len() + padding
+	}
 
-	//if e.adds != nil {
-	//	buf.Write(e.adds.Bytes())
-	//	io.WriteString(buf, " ")
-	//}
-	//if e.deletes != nil {
-	//	buf.Write(e.deletes.Bytes())
-	//	io.WriteString(buf, " ")
-	//}
-	//if e.removes != nil {
-	//	buf.Write(e.removes.Bytes())
-	//	io.WriteString(buf, " ")
-	//}
+	if size == 0 {
+		return nil
+	}
+
+	buf := bytes.NewBuffer(make([]byte, 0, size))
+	if e.adds != nil {
+		buf.Write(e.adds.Bytes())
+		buf.WriteString(" ")
+	}
+	if e.deletes != nil {
+		buf.Write(e.deletes.Bytes())
+		buf.WriteString(" ")
+	}
+	if e.removes != nil {
+		buf.Write(e.removes.Bytes())
+		buf.WriteString(" ")
+	}
 	if e.sets != nil {
 		buf.Write(e.sets.Bytes())
-		io.WriteString(buf, " ")
+		buf.WriteString(" ")
 	}
 
-	// strip off trailing space
-	if buf.Len() > 0 {
-		buf.Truncate(buf.Len() - 1)
-	}
-
-	return buf.String()
+	buf.Truncate(buf.Len() - 1) // strip off trailing space
+	return aws.String(buf.String())
 }
 
-func (e *expression) Size() int {
-	size := 0
-	//if e.adds != nil {
-	//	size += e.adds.Len() + 1
-	//}
-	//if e.deletes != nil {
-	//	size += e.deletes.Len() + 1
-	//}
-	//if e.removes != nil {
-	//	size += e.removes.Len() + 1
-	//}
-	if e.sets != nil {
-		size += e.sets.Len() + 1
+func (e *expression) ConditionExpression() *string {
+	if e.conditions == nil {
+		return nil
 	}
-	return size
+
+	return aws.String(e.conditions.String())
 }
 
-func (e *expression) append(buf *bytes.Buffer, keyword, expr string, values ...interface{}) error {
+func (e *expression) append(buf *bytes.Buffer, keyword, separator, expr string, values ...interface{}) error {
 	var items []*dynamodb.AttributeValue
 	for _, value := range values {
 		item, err := marshal(value)
@@ -156,37 +160,46 @@ func (e *expression) append(buf *bytes.Buffer, keyword, expr string, values ...i
 			buf.WriteString(" ")
 		}
 	} else {
-		buf.WriteString(", ")
+		buf.WriteString(separator)
 	}
 	buf.WriteString(strings.TrimSpace(expr))
 
 	return nil
 }
 
-//func (e *expression) Add(expr string, values ...Value) error {
-//	if e.adds == nil {
-//		e.adds = bytes.NewBuffer(make([]byte, 0, 128))
-//	}
-//	return e.append(e.adds, "Add", expr, values...)
-//}
-//
-//func (e *expression) Delete(expr string, values ...Value) error {
-//	if e.deletes == nil {
-//		e.deletes = bytes.NewBuffer(make([]byte, 0, 128))
-//	}
-//	return e.append(e.deletes, "Delete", expr, values...)
-//}
-//
-//func (e *expression) Remove(expr string, values ...Value) error {
-//	if e.removes == nil {
-//		e.removes = bytes.NewBuffer(make([]byte, 0, 128))
-//	}
-//	return e.append(e.removes, "Remove", expr, values...)
-//}
+const comma = ", "
+
+func (e *expression) Add(expr string, values ...interface{}) error {
+	if e.adds == nil {
+		e.adds = bytes.NewBuffer(make([]byte, 0, 128))
+	}
+	return e.append(e.adds, "Add", comma, expr, values...)
+}
+
+func (e *expression) Condition(expr string, values ...interface{}) error {
+	if e.conditions == nil {
+		e.conditions = bytes.NewBuffer(make([]byte, 0, 128))
+	}
+	return e.append(e.conditions, "", " and ", expr, values...)
+}
+
+func (e *expression) Delete(expr string, values ...interface{}) error {
+	if e.deletes == nil {
+		e.deletes = bytes.NewBuffer(make([]byte, 0, 128))
+	}
+	return e.append(e.deletes, "Delete", comma, expr, values...)
+}
+
+func (e *expression) Remove(expr string, values ...interface{}) error {
+	if e.removes == nil {
+		e.removes = bytes.NewBuffer(make([]byte, 0, 128))
+	}
+	return e.append(e.removes, "Remove", comma, expr, values...)
+}
 
 func (e *expression) Set(expr string, values ...interface{}) error {
 	if e.sets == nil {
 		e.sets = bytes.NewBuffer(make([]byte, 0, 128))
 	}
-	return e.append(e.sets, "Set", expr, values...)
+	return e.append(e.sets, "Set", comma, expr, values...)
 }

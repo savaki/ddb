@@ -15,47 +15,71 @@
 package ddb
 
 import (
-	"context"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 )
 
-func TestDeleteTable(t *testing.T) {
-	var (
-		ctx       = context.Background()
-		tableName = "blah"
-	)
+type DeleteTable struct {
+	ID    string `ddb:"hash"`
+	Field int
+}
 
-	t.Run("ok", func(t *testing.T) {
-		mock := &Mock{}
-		table := New(mock).MustTable(tableName, Example{})
-		err := table.DeleteTableIfExists(ctx)
+func TestDelete_Condition(t *testing.T) {
+	t.Run("single", func(t *testing.T) {
+		var (
+			item  = DeleteTable{ID: "abc"}
+			mock  = &Mock{}
+			db    = New(mock)
+			table = db.MustTable("example", DeleteTable{})
+		)
+
+		del := table.Delete(item.ID)
+		del.Condition("#ID != ?", "def")
+		err := del.Run()
 		if err != nil {
 			t.Fatalf("got %v; want nil", err)
 		}
+		if mock.deleteInput == nil {
+			t.Fatalf("got nil; want not nil")
+		}
+		assertEqual(t, mock.deleteInput, "testdata/delete_condition_single.json")
 	})
 
-	t.Run("table already exists", func(t *testing.T) {
-		mock := &Mock{
-			err: awserr.New(dynamodb.ErrCodeResourceNotFoundException, "boom", nil),
-		}
-		table := New(mock).MustTable(tableName, Example{})
-		err := table.DeleteTableIfExists(ctx)
+	t.Run("multiple", func(t *testing.T) {
+		var (
+			item  = DeleteTable{ID: "abc"}
+			mock  = &Mock{}
+			db    = New(mock)
+			table = db.MustTable("example", DeleteTable{})
+		)
+
+		del := table.Delete(item.ID)
+		del.Condition("#Field > ?", 0)
+		del.Condition("#Field < ?", 10)
+		err := del.Run()
 		if err != nil {
 			t.Fatalf("got %v; want nil", err)
 		}
+		if mock.deleteInput == nil {
+			t.Fatalf("got nil; want not nil")
+		}
+		assertEqual(t, mock.deleteInput, "testdata/delete_condition_multiple.json")
 	})
 
-	t.Run("other error", func(t *testing.T) {
-		mock := &Mock{
-			err: awserr.New(dynamodb.ErrCodeConditionalCheckFailedException, "boom", nil),
-		}
-		table := New(mock).MustTable(tableName, Example{})
-		err := table.DeleteTableIfExists(ctx)
-		if err == nil {
-			t.Fatalf("got %v; want not nil", err)
+	t.Run("aws err", func(t *testing.T) {
+		var (
+			original = awserr.New(dynamodb.ErrCodeConditionalCheckFailedException, "boom", nil)
+			mock     = &Mock{err: original}
+			db       = New(mock)
+			table    = db.MustTable("example", DeleteTable{})
+		)
+
+		del := table.Delete("blah")
+		err := del.Run()
+		if err != original {
+			t.Fatalf("got %v; want %v", err, original)
 		}
 	})
 }

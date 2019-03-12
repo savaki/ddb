@@ -1,10 +1,9 @@
 {
-  "AttributeUpdates": null,
-  "ConditionExpression": null,
+  "ConditionExpression": "#ID != :f1",
   "ConditionalOperator": null,
   "Expected": null,
   "ExpressionAttributeNames": {
-    "#A": "a"
+    "#ID": "ID"
   },
   "ExpressionAttributeValues": {
     ":f1": {
@@ -13,26 +12,14 @@
       "BS": null,
       "L": null,
       "M": null,
-      "N": "123",
+      "N": null,
       "NS": null,
       "NULL": null,
-      "S": null,
+      "S": "def",
       "SS": null
     }
   },
   "Key": {
-    "Date": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": null,
-      "NS": null,
-      "NULL": null,
-      "S": "world",
-      "SS": null
-    },
     "ID": {
       "B": null,
       "BOOL": null,
@@ -42,13 +29,12 @@
       "N": null,
       "NS": null,
       "NULL": null,
-      "S": "hello",
+      "S": "abc",
       "SS": null
     }
   },
   "ReturnConsumedCapacity": "TOTAL",
   "ReturnItemCollectionMetrics": null,
   "ReturnValues": null,
-  "TableName": "example",
-  "UpdateExpression": "Set #A = :f1"
+  "TableName": "example"
 }

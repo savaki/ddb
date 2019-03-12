@@ -16,27 +16,50 @@ type Update struct {
 	consistentRead bool
 	consumed       *ConsumedCapacity
 	err            error
-	updates        *expression
+	expr           *expression
 }
 
 func (u *Update) makeUpdateItemInput() (*dynamodb.UpdateItemInput, error) {
-	var (
-		updateExpression = u.updates.String()
-	)
-
 	key, err := makeKey(u.spec, u.hashKey, u.rangeKey)
 	if err != nil {
 		return nil, err
 	}
 
+	conditionExpression := u.expr.ConditionExpression()
+	updateExpression := u.expr.UpdateExpression()
 	return &dynamodb.UpdateItemInput{
-		ExpressionAttributeNames:  u.updates.names,
-		ExpressionAttributeValues: u.updates.values,
+		ConditionExpression:       conditionExpression,
+		ExpressionAttributeNames:  u.expr.names,
+		ExpressionAttributeValues: u.expr.values,
 		Key:                       key,
 		ReturnConsumedCapacity:    aws.String(dynamodb.ReturnConsumedCapacityTotal),
 		TableName:                 aws.String(u.spec.TableName),
-		UpdateExpression:          aws.String(updateExpression),
+		UpdateExpression:          updateExpression,
 	}, nil
+}
+
+func (u *Update) Add(expr string, values ...interface{}) *Update {
+	if err := u.expr.Add(expr, values...); err != nil {
+		u.err = err
+	}
+
+	return u
+}
+
+func (u *Update) Condition(expr string, values ...interface{}) *Update {
+	if err := u.expr.Condition(expr, values...); err != nil {
+		u.err = err
+	}
+
+	return u
+}
+
+func (u *Update) Delete(expr string, values ...interface{}) *Update {
+	if err := u.expr.Delete(expr, values...); err != nil {
+		u.err = err
+	}
+
+	return u
 }
 
 func (u *Update) Range(rangeKey interface{}) *Update {
@@ -44,17 +67,21 @@ func (u *Update) Range(rangeKey interface{}) *Update {
 	return u
 }
 
-func (u *Update) Set(expr string, values ...interface{}) *Update {
-	if err := u.updates.Set(expr, values...); err != nil {
+func (u *Update) Remove(expr string, values ...interface{}) *Update {
+	if err := u.expr.Remove(expr, values...); err != nil {
 		u.err = err
 	}
 
 	return u
 }
 
-//func (u *Update) Where(expr string, values ...interface{}) error {
-//
-//}
+func (u *Update) Set(expr string, values ...interface{}) *Update {
+	if err := u.expr.Set(expr, values...); err != nil {
+		u.err = err
+	}
+
+	return u
+}
 
 func (u *Update) RunWithContext(ctx context.Context) error {
 	if u.err != nil {
@@ -85,7 +112,7 @@ func (t *Table) Update(hashKey interface{}) *Update {
 		spec:     t.spec,
 		hashKey:  hashKey,
 		consumed: t.consumed,
-		updates: &expression{
+		expr: &expression{
 			attributes: t.spec.Attributes,
 		},
 	}

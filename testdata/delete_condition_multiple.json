@@ -1,11 +1,9 @@
 {
-  "AttributeUpdates": null,
-  "ConditionExpression": null,
+  "ConditionExpression": "#Field \u003e :f1 and #Field \u003c :f2",
   "ConditionalOperator": null,
   "Expected": null,
   "ExpressionAttributeNames": {
-    "#A": "a",
-    "#B": "b"
+    "#Field": "Field"
   },
   "ExpressionAttributeValues": {
     ":f1": {
@@ -14,7 +12,7 @@
       "BS": null,
       "L": null,
       "M": null,
-      "N": "123",
+      "N": "0",
       "NS": null,
       "NULL": null,
       "S": null,
@@ -26,7 +24,7 @@
       "BS": null,
       "L": null,
       "M": null,
-      "N": "456",
+      "N": "10",
       "NS": null,
       "NULL": null,
       "S": null,
@@ -34,18 +32,6 @@
     }
   },
   "Key": {
-    "Date": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": null,
-      "NS": null,
-      "NULL": null,
-      "S": "world",
-      "SS": null
-    },
     "ID": {
       "B": null,
       "BOOL": null,
@@ -55,13 +41,12 @@
       "N": null,
       "NS": null,
       "NULL": null,
-      "S": "hello",
+      "S": "abc",
       "SS": null
     }
   },
   "ReturnConsumedCapacity": "TOTAL",
   "ReturnItemCollectionMetrics": null,
   "ReturnValues": null,
-  "TableName": "example",
-  "UpdateExpression": "Set #A = :f1, #B = :f2"
+  "TableName": "example"
 }

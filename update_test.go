@@ -8,10 +8,11 @@ import (
 )
 
 type UpdateTable struct {
-	ID   string `ddb:"hash"`
-	Date string `ddb:"range"`
-	A    string `dynamodbav:"a"`
-	B    string `dynamodbav:"b"`
+	ID    string `ddb:"hash"`
+	Date  string `ddb:"range"`
+	A     string `dynamodbav:"a"`
+	B     string `dynamodbav:"b"`
+	Count int
 }
 
 func TestReKeys(t *testing.T) {
@@ -48,6 +49,72 @@ func TestReKeys(t *testing.T) {
 	})
 }
 
+func TestUpdate_Add(t *testing.T) {
+	const tableName = "example"
+
+	t.Run("ok", func(t *testing.T) {
+		table := New(nil).MustTable(tableName, UpdateTable{})
+		update := table.Update("hello").Range("world")
+
+		// When
+		update.Add("#Count ?", 1)
+		if update.err != nil {
+			t.Fatalf("got %v; want nil", update.err)
+		}
+
+		input, err := update.makeUpdateItemInput()
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+
+		assertEqual(t, input, "testdata/update_add_ok.json")
+	})
+}
+
+func TestUpdate_Delete(t *testing.T) {
+	const tableName = "example"
+
+	t.Run("ok", func(t *testing.T) {
+		table := New(nil).MustTable(tableName, UpdateTable{})
+		update := table.Update("hello").Range("world")
+
+		// When
+		update.Delete("#Count == ?", 1)
+		if update.err != nil {
+			t.Fatalf("got %v; want nil", update.err)
+		}
+
+		input, err := update.makeUpdateItemInput()
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+
+		assertEqual(t, input, "testdata/update_delete_ok.json")
+	})
+}
+
+func TestUpdate_Remove(t *testing.T) {
+	const tableName = "example"
+
+	t.Run("ok", func(t *testing.T) {
+		table := New(nil).MustTable(tableName, UpdateTable{})
+		update := table.Update("hello").Range("world")
+
+		// When
+		update.Remove("#Count")
+		if update.err != nil {
+			t.Fatalf("got %v; want nil", update.err)
+		}
+
+		input, err := update.makeUpdateItemInput()
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+
+		assertEqual(t, input, "testdata/update_remove_ok.json")
+	})
+}
+
 func TestUpdate_Set(t *testing.T) {
 	const tableName = "example"
 
@@ -67,6 +134,25 @@ func TestUpdate_Set(t *testing.T) {
 		}
 
 		assertEqual(t, input, "testdata/update_set_ok.json")
+	})
+
+	t.Run("conditional", func(t *testing.T) {
+		table := New(nil).MustTable(tableName, UpdateTable{})
+		update := table.Update("hello").Range("world")
+
+		// When
+		update.Condition("#A == ?", "blah")
+		update.Set("#a = ?", 123)
+		if update.err != nil {
+			t.Fatalf("got %v; want nil", update.err)
+		}
+
+		input, err := update.makeUpdateItemInput()
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+
+		assertEqual(t, input, "testdata/update_set_conditional.json")
 	})
 
 	t.Run("multiple calls to set", func(t *testing.T) {

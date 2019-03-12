@@ -267,3 +267,18 @@ func (t *Table) CreateTableIfNotExists(ctx context.Context, opts ...TableOption)
 
 	return nil
 }
+
+func (t *Table) DeleteTableIfExists(ctx context.Context) error {
+	input := dynamodb.DeleteTableInput{
+		TableName: aws.String(t.tableName),
+	}
+	if _, err := t.ddb.api.DeleteTableWithContext(ctx, &input); err != nil {
+		if v, ok := err.(awserr.Error); ok && v.Code() == dynamodb.ErrCodeResourceNotFoundException {
+			return nil
+		}
+
+		return err
+	}
+
+	return nil
+}

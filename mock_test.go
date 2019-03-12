@@ -18,10 +18,12 @@ func init() {
 
 type Mock struct {
 	dynamodbiface.DynamoDBAPI
-	mutex       sync.Mutex
-	err         error
-	getItem     interface{}
-	scanItems   []interface{}
+	mutex     sync.Mutex
+	err       error
+	getItem   interface{}
+	scanItems []interface{}
+
+	deleteInput *dynamodb.DeleteItemInput
 	getInput    *dynamodb.GetItemInput
 	putInput    *dynamodb.PutItemInput
 	scanInput   *dynamodb.ScanInput
@@ -30,6 +32,16 @@ type Mock struct {
 
 func (m *Mock) CreateTableWithContext(aws.Context, *dynamodb.CreateTableInput, ...request.Option) (*dynamodb.CreateTableOutput, error) {
 	return &dynamodb.CreateTableOutput{}, m.err
+}
+
+func (m *Mock) DeleteItemWithContext(ctx aws.Context, input *dynamodb.DeleteItemInput, opts ...request.Option) (*dynamodb.DeleteItemOutput, error) {
+	m.deleteInput = input
+
+	return &dynamodb.DeleteItemOutput{
+		ConsumedCapacity: &dynamodb.ConsumedCapacity{
+			ReadCapacityUnits: aws.Float64(1),
+		},
+	}, m.err
 }
 
 func (m *Mock) DeleteTableWithContext(aws.Context, *dynamodb.DeleteTableInput, ...request.Option) (*dynamodb.DeleteTableOutput, error) {

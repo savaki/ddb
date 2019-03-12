@@ -13,6 +13,16 @@ type Put struct {
 	spec     *tableSpec
 	value    interface{}
 	consumed *ConsumedCapacity
+	err      error
+	expr     *expression
+}
+
+func (p *Put) Condition(expr string, values ...interface{}) *Put {
+	if err := p.expr.Condition(expr, values...); err != nil {
+		p.err = err
+	}
+
+	return p
 }
 
 func (p *Put) RunWithContext(ctx context.Context) error {
@@ -22,8 +32,11 @@ func (p *Put) RunWithContext(ctx context.Context) error {
 	}
 
 	input := dynamodb.PutItemInput{
-		Item:      item,
-		TableName: aws.String(p.spec.TableName),
+		ConditionExpression:       p.expr.ConditionExpression(),
+		Item:                      item,
+		ExpressionAttributeNames:  p.expr.names,
+		ExpressionAttributeValues: p.expr.values,
+		TableName:                 aws.String(p.spec.TableName),
 	}
 	output, err := p.api.PutItemWithContext(ctx, &input)
 	if err != nil {
@@ -45,5 +58,8 @@ func (t *Table) Put(v interface{}) *Put {
 		spec:     t.spec,
 		value:    v,
 		consumed: t.consumed,
+		expr: &expression{
+			attributes: t.spec.Attributes,
+		},
 	}
 }
