@@ -11,19 +11,23 @@ import (
 type Update struct {
 	api            dynamodbiface.DynamoDBAPI
 	spec           *tableSpec
-	hashKey        Value
-	rangeKey       Value
+	hashKey        interface{}
+	rangeKey       interface{}
 	consistentRead bool
 	consumed       *ConsumedCapacity
 	err            error
 	updates        *expression
 }
 
-func (u *Update) makeUpdateItemInput() *dynamodb.UpdateItemInput {
+func (u *Update) makeUpdateItemInput() (*dynamodb.UpdateItemInput, error) {
 	var (
-		key              = makeKey(u.spec, u.hashKey, u.rangeKey)
 		updateExpression = u.updates.String()
 	)
+
+	key, err := makeKey(u.spec, u.hashKey, u.rangeKey)
+	if err != nil {
+		return nil, err
+	}
 
 	return &dynamodb.UpdateItemInput{
 		ExpressionAttributeNames:  u.updates.names,
@@ -32,15 +36,15 @@ func (u *Update) makeUpdateItemInput() *dynamodb.UpdateItemInput {
 		ReturnConsumedCapacity:    aws.String(dynamodb.ReturnConsumedCapacityTotal),
 		TableName:                 aws.String(u.spec.TableName),
 		UpdateExpression:          aws.String(updateExpression),
-	}
+	}, nil
 }
 
-func (u *Update) Range(value Value) *Update {
-	u.rangeKey = value
+func (u *Update) Range(rangeKey interface{}) *Update {
+	u.rangeKey = rangeKey
 	return u
 }
 
-func (u *Update) Set(expr string, values ...Value) *Update {
+func (u *Update) Set(expr string, values ...interface{}) *Update {
 	if err := u.updates.Set(expr, values...); err != nil {
 		u.err = err
 	}
@@ -48,12 +52,20 @@ func (u *Update) Set(expr string, values ...Value) *Update {
 	return u
 }
 
+//func (u *Update) Where(expr string, values ...interface{}) error {
+//
+//}
+
 func (u *Update) RunWithContext(ctx context.Context) error {
 	if u.err != nil {
 		return u.err
 	}
 
-	input := u.makeUpdateItemInput()
+	input, err := u.makeUpdateItemInput()
+	if err != nil {
+		return err
+	}
+
 	output, err := u.api.UpdateItemWithContext(ctx, input)
 	if err != nil {
 		return err
@@ -67,7 +79,7 @@ func (u *Update) Run() error {
 	return u.RunWithContext(defaultContext)
 }
 
-func (t *Table) Update(hashKey Value) *Update {
+func (t *Table) Update(hashKey interface{}) *Update {
 	return &Update{
 		api:      t.ddb.api,
 		spec:     t.spec,

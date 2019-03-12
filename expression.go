@@ -3,6 +3,7 @@ package ddb
 import (
 	"bytes"
 	"io"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -51,14 +52,14 @@ func (e *expression) setExpressionAttributeName(name string) (string, error) {
 	return "", errorf(ErrInvalidFieldName, "invalid field name, %v", name)
 }
 
-func (e *expression) setExpressionAttributeValue(value Value) string {
+func (e *expression) setExpressionAttributeValue(item *dynamodb.AttributeValue) string {
 	if e.values == nil {
 		e.values = map[string]*dynamodb.AttributeValue{}
 	}
 
 	id := atomic.AddInt64(&e.index, 1)
 	name := ":field" + strconv.FormatInt(id, 10)
-	e.values[name] = value.item
+	e.values[name] = item
 
 	return name
 }
@@ -109,7 +110,17 @@ func (e *expression) Size() int {
 	return size
 }
 
-func (e *expression) append(buf *bytes.Buffer, keyword, expr string, values ...Value) error {
+func (e *expression) append(buf *bytes.Buffer, keyword, expr string, values ...interface{}) error {
+	var items []*dynamodb.AttributeValue
+	for _, value := range values {
+		item, err := marshal(value)
+		if err != nil {
+			return wrapf(err, ErrUnableToMarshalItem, "unable to marshal %v", reflect.TypeOf(value))
+		}
+
+		items = append(items, item)
+	}
+
 	// names
 	//
 	matches := reKeys.FindAllStringSubmatch(expr, -1)
@@ -132,8 +143,8 @@ func (e *expression) append(buf *bytes.Buffer, keyword, expr string, values ...V
 		return errorf(ErrMismatchedValueCount, "Set expression, %v, contains %v values, but received %v values", expr, len(matches), len(values))
 	}
 	for index := range matches {
-		value := values[index]
-		fieldName := e.setExpressionAttributeValue(value)
+		item := items[index]
+		fieldName := e.setExpressionAttributeValue(item)
 		expr = strings.Replace(expr, "?", fieldName, 1)
 	}
 
@@ -173,7 +184,7 @@ func (e *expression) append(buf *bytes.Buffer, keyword, expr string, values ...V
 //	return e.append(e.removes, "Remove", expr, values...)
 //}
 
-func (e *expression) Set(expr string, values ...Value) error {
+func (e *expression) Set(expr string, values ...interface{}) error {
 	if e.sets == nil {
 		e.sets = bytes.NewBuffer(make([]byte, 0, 128))
 	}

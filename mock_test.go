@@ -7,7 +7,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 )
 
@@ -42,7 +41,7 @@ func (m *Mock) GetItemWithContext(ctx aws.Context, input *dynamodb.GetItemInput,
 
 	var item map[string]*dynamodb.AttributeValue
 	if m.getItem != nil {
-		v, err := dynamodbattribute.MarshalMap(m.getItem)
+		v, err := marshalMap(m.getItem)
 		if err != nil {
 			return nil, err
 		}
@@ -75,7 +74,7 @@ func (m *Mock) ScanWithContext(ctx aws.Context, input *dynamodb.ScanInput, opts 
 	defer m.mutex.Unlock()
 
 	if n := len(m.scanItems); n > 0 {
-		item, err := dynamodbattribute.MarshalMap(m.scanItems[0])
+		item, err := marshalMap(m.scanItems[0])
 		if err == nil {
 			output.Items = append(output.Items, item)
 		}
@@ -97,5 +96,5 @@ func (m *Mock) UpdateItemWithContext(ctx aws.Context, input *dynamodb.UpdateItem
 		ConsumedCapacity: &dynamodb.ConsumedCapacity{
 			WriteCapacityUnits: aws.Float64(1),
 		},
-	}, nil
+	}, m.err
 }

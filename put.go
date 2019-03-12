@@ -5,7 +5,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 )
 
@@ -17,7 +16,7 @@ type Put struct {
 }
 
 func (p *Put) RunWithContext(ctx context.Context) error {
-	item, err := dynamodbattribute.MarshalMap(p.value)
+	item, err := marshalMap(p.value)
 	if err != nil {
 		return err
 	}

@@ -2,6 +2,9 @@ package ddb
 
 import (
 	"testing"
+
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 )
 
 type UpdateTable struct {
@@ -50,39 +53,47 @@ func TestUpdate_Set(t *testing.T) {
 
 	t.Run("ok", func(t *testing.T) {
 		table := New(nil).MustTable(tableName, UpdateTable{})
-		update := table.Update(String("hello")).Range(String("world"))
+		update := table.Update("hello").Range("world")
 
 		// When
-		update.Set("#a = ?", Int64(123))
+		update.Set("#a = ?", 123)
 		if update.err != nil {
 			t.Fatalf("got %v; want nil", update.err)
 		}
 
-		input := update.makeUpdateItemInput()
+		input, err := update.makeUpdateItemInput()
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+
 		assertEqual(t, input, "testdata/update_set_ok.json")
 	})
 
 	t.Run("multiple calls to set", func(t *testing.T) {
 		table := New(nil).MustTable(tableName, UpdateTable{})
-		update := table.Update(String("hello")).Range(String("world"))
+		update := table.Update("hello").Range("world")
 
 		// When
-		update.Set("#a = ?", Int64(123))
-		update.Set("#b = ?", Int64(456))
+		update.Set("#a = ?", 123)
+		update.Set("#b = ?", 456)
 		if update.err != nil {
 			t.Fatalf("got %v; want nil", update.err)
 		}
 
-		input := update.makeUpdateItemInput()
+		input, err := update.makeUpdateItemInput()
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+
 		assertEqual(t, input, "testdata/update_set_multiple.json")
 	})
 
 	t.Run("invalid attribute", func(t *testing.T) {
 		table := New(nil).MustTable(tableName, UpdateTable{})
-		update := table.Update(String("hello")).Range(String("world"))
+		update := table.Update("hello").Range("world")
 
 		// When
-		update.Set("#junk = ?", Int64(123))
+		update.Set("#junk = ?", 123)
 		err := update.Run()
 
 		if !IsInvalidFieldNameError(err) {
@@ -100,11 +111,26 @@ func TestUpdate_Run(t *testing.T) {
 			table = New(mock).MustTable(tableName, UpdateTable{})
 		)
 
-		update := table.Update(String("hello")).Range(String("world"))
-		update.Set("#a = ?", Int64(123))
+		update := table.Update("hello").Range("world")
+		update.Set("#a = ?", 123)
 		err := update.Run()
 		if err != nil {
 			t.Fatalf("got %v; want nil", err)
+		}
+	})
+
+	t.Run("aws err", func(t *testing.T) {
+		var (
+			original = awserr.New(dynamodb.ErrCodeConditionalCheckFailedException, "boom", nil)
+			mock     = &Mock{err: original}
+			table    = New(mock).MustTable(tableName, UpdateTable{})
+		)
+
+		update := table.Update("hello").Range("world")
+		update.Set("#a = ?", 123)
+		err := update.Run()
+		if err != original {
+			t.Fatalf("got %v; want %v", err, original)
 		}
 	})
 }

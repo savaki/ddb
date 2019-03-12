@@ -32,7 +32,7 @@ func TestGet_One(t *testing.T) {
 		}
 
 		var got GetExample
-		err = table.Get(String("abc")).Scan(&got)
+		err = table.Get("abc").Scan(&got)
 		if err != nil {
 			t.Fatalf("got %v; want nil", err)
 		}
@@ -57,7 +57,7 @@ func TestGet_One(t *testing.T) {
 		)
 
 		var blah GetExample
-		got := table.Get(String("abc")).Scan(&blah)
+		got := table.Get("abc").Scan(&blah)
 		if got != want {
 			t.Fatalf("got %v; want %v", got, want)
 		}
@@ -70,7 +70,7 @@ func TestGet_One(t *testing.T) {
 		)
 
 		var blah GetExample
-		err := table.Get(String("abc")).Scan(&blah)
+		err := table.Get("abc").Scan(&blah)
 		if !IsItemNotFoundError(err) {
 			t.Fatalf("got %v; want ErrItemNotFound", err)
 		}
@@ -105,7 +105,7 @@ func TestLive(t *testing.T) {
 	}
 
 	var got GetExample
-	err = table.Get(String(want.ID)).ScanWithContext(ctx, &got)
+	err = table.Get(want.ID).ScanWithContext(ctx, &got)
 	if err != nil {
 		t.Fatalf("got %v; want nil", err)
 	}
@@ -115,25 +115,12 @@ func TestLive(t *testing.T) {
 	}
 }
 
-func TestInt64Value(t *testing.T) {
-	value := Int64(123)
-	if value.item == nil {
-		t.Fatalf("got nil; want not nil")
-	}
-	if got, want := *value.item.N, "123"; got != want {
-		t.Fatalf("got %v; want %v", got, want)
-	}
-}
-
 func TestGet_Range(t *testing.T) {
 	want := "abc"
 	g := &Get{}
-	g.Range(String(want))
+	g.Range(want)
 
-	if got := g.rangeKey.item; got == nil {
-		t.Fatalf("got nil; want not nil")
-	}
-	if got := *g.rangeKey.item.S; got != want {
+	if got := g.rangeKey; got != want {
 		t.Fatalf("got %v; want %v", got, want)
 	}
 }
@@ -143,19 +130,14 @@ func TestGet_ConsistentRead(t *testing.T) {
 		spec: &tableSpec{TableName: "example"},
 	}
 	g.ConsistentRead(true)
-	input := g.makeGetItemInput()
+	input, err := g.makeGetItemInput()
+	if err != nil {
+		t.Fatalf("got %v; want nil", err)
+	}
 	if input.ConsistentRead == nil {
 		t.Fatalf("got nil; expected not nil")
 	}
 	if !*input.ConsistentRead {
 		t.Fatalf("got false; expected true")
-	}
-}
-
-func TestRaw(t *testing.T) {
-	item := &dynamodb.AttributeValue{S: aws.String("world")}
-	raw := Raw(item)
-	if raw.item != item {
-		t.Fatalf("got %v; want %v", raw.item, item)
 	}
 }

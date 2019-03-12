@@ -8,6 +8,7 @@ const (
 	ErrInvalidFieldName     = "InvalidFieldName"
 	ErrItemNotFound         = "ItemNotFound"
 	ErrMismatchedValueCount = "MismatchedValueCount"
+	ErrUnableToMarshalItem  = "UnableToMarshalItem"
 )
 
 // Error provides a unified error definition that includes a code and message
