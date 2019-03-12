@@ -10,8 +10,8 @@ import (
 )
 
 type Simple struct {
-	Hash  string `ddb:"hash_key"`
-	Range string `ddb:"range_key"`
+	Hash  string `ddb:"hash"`
+	Range string `ddb:"range"`
 }
 
 func Test_makeKey(t *testing.T) {

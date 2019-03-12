@@ -24,7 +24,7 @@ func TestTable_DDB(t *testing.T) {
 }
 
 type InvalidModel struct {
-	ID struct{} `ddb:"hash_key"` // struct{} is an invalid key
+	ID struct{} `ddb:"hash"` // struct{} is an invalid key
 }
 
 func TestTable_ConsumedCapacity(t *testing.T) {

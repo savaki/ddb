@@ -7,7 +7,7 @@ import (
 )
 
 type ScanTable struct {
-	ID string `ddb:"hash_key"`
+	ID string `ddb:"hash"`
 }
 
 func TestScan_First(t *testing.T) {

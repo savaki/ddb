@@ -28,27 +28,27 @@ import (
 )
 
 type Sample struct {
-	Hash  string `ddb:"hash_key"`
-	Range int64  `ddb:"range_key"`
+	Hash  string `ddb:"hash"`
+	Range int64  `ddb:"range"`
 }
 
 type LSI struct {
-	Hash     string `ddb:"hash_key"`
-	Range    int64  `ddb:"range_key"`
+	Hash     string `ddb:"hash"`
+	Range    int64  `ddb:"range"`
 	AltRange int64  `ddb:"lsi_range:index" dynamodbav:"alt"`
 	Hello    string `ddb:"lsi:index"       dynamodbav:"hello"`
 }
 
 type LSIKeysOnly struct {
-	Hash     string `ddb:"hash_key"`
-	Range    int64  `ddb:"range_key"`
+	Hash     string `ddb:"hash"`
+	Range    int64  `ddb:"range"`
 	AltRange int64  `ddb:"lsi_range:index,keys_only" dynamodbav:"alt"`
 	Hello    string
 }
 
 type GSI struct {
-	Hash     string `ddb:"hash_key"`
-	Range    int64  `ddb:"range_key"`
+	Hash     string `ddb:"hash"`
+	Range    int64  `ddb:"range"`
 	AltHash  int64  `ddb:"gsi_hash:index"  dynamodbav:"h"`
 	AltRange int64  `ddb:"gsi_range:index" dynamodbav:"r"`
 	Hello    string `ddb:"gsi:index"       dynamodbav:"hello"`

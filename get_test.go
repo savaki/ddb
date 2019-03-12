@@ -15,7 +15,7 @@ import (
 )
 
 type GetExample struct {
-	ID string `ddb:"hash_key"`
+	ID string `ddb:"hash"`
 }
 
 func TestGet_One(t *testing.T) {

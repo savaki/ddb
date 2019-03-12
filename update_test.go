@@ -8,8 +8,8 @@ import (
 )
 
 type UpdateTable struct {
-	ID   string `ddb:"hash_key"`
-	Date string `ddb:"range_key"`
+	ID   string `ddb:"hash"`
+	Date string `ddb:"range"`
 	A    string `dynamodbav:"a"`
 	B    string `dynamodbav:"b"`
 }

@@ -8,7 +8,7 @@ import (
 )
 
 type PutTable struct {
-	ID string `ddb:"hash_key"`
+	ID string `ddb:"hash"`
 }
 
 func TestPut_Run(t *testing.T) {

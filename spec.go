@@ -28,8 +28,8 @@ const (
 )
 
 const (
-	tagHashKey  = "hash_key"
-	tagRangeKey = "range_key"
+	tagHashKey  = "hash"
+	tagRangeKey = "range"
 	tagGsiHash  = "gsi_hash:"
 	tagGsiRange = "gsi_range:"
 	tagGsi      = "gsi:"

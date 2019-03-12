@@ -10,8 +10,8 @@ ddb
 
 ```golang
 type Example struct {
-  PlayerID string `ddb:"hash_key"`
-  Date     string `ddb:"range_key"`
+  PlayerID string `ddb:"hash"`
+  Date     string `ddb:"range"`
 }
 
 func example() {
@@ -57,22 +57,22 @@ records to and from structs.
 
 #### Hash Key
 
-Use the `hash_key` tag to define the hash (e.g. partition) key. 
+Use the `hash` tag to define the hash (e.g. partition) key. 
 
 ```golang
 type Example struct {
-  ID string `ddb:"hash_key"`
+  ID string `ddb:"hash"`
 }
 ```
 
 #### Range Key
 
-Use the `range_key` tag to define the range (e.g. sort) key. 
+Use the `range` tag to define the range (e.g. sort) key. 
 
 ```golang
 type Example struct {
-  ID   string `ddb:"hash_key"`
-  Date string `ddb:"range_key"`
+  ID   string `ddb:"hash"`
+  Date string `ddb:"range"`
 }
 ```
 
@@ -89,8 +89,8 @@ range key is `Alt` that includes `Field1`.
 
 ```golang
 type Example struct {
-  ID     string `ddb:"hash_key"`
-  Date   string `ddb:"range_key"`
+  ID     string `ddb:"hash"`
+  Date   string `ddb:"range"`
   Alt    string `ddb:"lsi_range:blah"`
   Field1 string `ddb:"lsi:blah"`
   Field2 string
@@ -111,8 +111,8 @@ hash key is `VerifiedAt` and whose range key is `ID`.
 
 ```golang
 type Example struct {
-  ID         string `ddb:"hash_key;gsi_range:blah"`
-  Date       string `ddb:"range_key"`
+  ID         string `ddb:"hash;gsi_range:blah"`
+  Date       string `ddb:"range"`
   VerifiedAt int64  `ddb:"gsi_hash:blah"`
 }
 ```
@@ -124,6 +124,6 @@ define the schema.  Here the hash key of the table will be set to `id` (not `ID`
 
 ```golang
 type Example struct {
-  ID string `ddb:"hash_key" dynamodbav:"id"`
+  ID string `ddb:"hash" dynamodbav:"id"`
 }
 ```

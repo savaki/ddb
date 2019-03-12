@@ -20,8 +20,8 @@ import (
 )
 
 type Model struct {
-	Hash     string `ddb:"hash_key"`
-	Range    int64  `ddb:"range_key"`
+	Hash     string `ddb:"hash"`
+	Range    int64  `ddb:"range"`
 	AltRange uint64 `ddb:"lsi_range:local" dynamodbav:"alt"`
 }
 
@@ -31,7 +31,7 @@ func TestInspect(t *testing.T) {
 		t.Fatalf("got %v; want nil", err)
 	}
 
-	t.Run("hash_key", func(t *testing.T) {
+	t.Run("hash", func(t *testing.T) {
 		if spec.HashKey == nil {
 			t.Fatalf("got nil; want not nill")
 		}
@@ -43,7 +43,7 @@ func TestInspect(t *testing.T) {
 		}
 	})
 
-	t.Run("range_key", func(t *testing.T) {
+	t.Run("range", func(t *testing.T) {
 		if spec.RangeKey == nil {
 			t.Fatalf("got nil; want not nill")
 		}
