@@ -1,0 +1,34 @@
+{
+  "AttributesToGet": null,
+  "ConditionalOperator": null,
+  "ConsistentRead": true,
+  "ExclusiveStartKey": null,
+  "ExpressionAttributeNames": {
+    "#Date": "Date"
+  },
+  "ExpressionAttributeValues": {
+    ":f1": {
+      "B": null,
+      "BOOL": null,
+      "BS": null,
+      "L": null,
+      "M": null,
+      "N": null,
+      "NS": null,
+      "NULL": null,
+      "S": "2019-03-10",
+      "SS": null
+    }
+  },
+  "FilterExpression": null,
+  "IndexName": "index",
+  "KeyConditionExpression": "#Date = :f1",
+  "KeyConditions": null,
+  "Limit": null,
+  "ProjectionExpression": null,
+  "QueryFilter": null,
+  "ReturnConsumedCapacity": "TOTAL",
+  "ScanIndexForward": true,
+  "Select": "ALL_ATTRIBUTES",
+  "TableName": "example"
+}

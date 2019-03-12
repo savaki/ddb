@@ -18,14 +18,16 @@ func init() {
 
 type Mock struct {
 	dynamodbiface.DynamoDBAPI
-	mutex     sync.Mutex
-	err       error
-	getItem   interface{}
-	scanItems []interface{}
+	mutex      sync.Mutex
+	err        error
+	getItem    interface{}
+	queryItems []interface{}
+	scanItems  []interface{}
 
 	deleteInput *dynamodb.DeleteItemInput
 	getInput    *dynamodb.GetItemInput
 	putInput    *dynamodb.PutItemInput
+	queryInput  *dynamodb.QueryInput
 	scanInput   *dynamodb.ScanInput
 	updateInput *dynamodb.UpdateItemInput
 }
@@ -75,6 +77,26 @@ func (m *Mock) PutItemWithContext(ctx aws.Context, input *dynamodb.PutItemInput,
 			WriteCapacityUnits: aws.Float64(1),
 		},
 	}, m.err
+}
+
+func (m *Mock) QueryWithContext(ctx aws.Context, input *dynamodb.QueryInput, opts ...request.Option) (*dynamodb.QueryOutput, error) {
+	m.queryInput = input
+	output := dynamodb.QueryOutput{
+		ConsumedCapacity: &dynamodb.ConsumedCapacity{
+			WriteCapacityUnits: aws.Float64(1),
+		},
+	}
+
+	for _, item := range m.queryItems {
+		v, err := marshalMap(item)
+		if err != nil {
+			return nil, err
+		}
+
+		output.Items = append(output.Items, v)
+	}
+
+	return &output, m.err
 }
 
 func (m *Mock) ScanWithContext(ctx aws.Context, input *dynamodb.ScanInput, opts ...request.Option) (*dynamodb.ScanOutput, error) {
