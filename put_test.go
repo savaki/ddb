@@ -28,6 +28,21 @@ func TestPut_Run(t *testing.T) {
 	})
 }
 
+func TestPut_PutItemInput(t *testing.T) {
+	var (
+		mock   = &Mock{}
+		db     = New(mock)
+		table  = db.MustTable("example", PutTable{})
+		record = PutTable{ID: "abc", Field: "def"}
+	)
+
+	input, err := table.Put(record).PutItemInput()
+	if err != nil {
+		t.Fatalf("got %v; want nil", err)
+	}
+	assertEqual(t, input, "testdata/put_item_input.json")
+}
+
 func TestPut_Condition(t *testing.T) {
 	t.Run("single", func(t *testing.T) {
 		var (

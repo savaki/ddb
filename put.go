@@ -17,6 +17,21 @@ type Put struct {
 	expr     *expression
 }
 
+func (p *Put) PutItemInput() (*dynamodb.PutItemInput, error) {
+	item, err := marshalMap(p.value)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dynamodb.PutItemInput{
+		ConditionExpression:       p.expr.ConditionExpression(),
+		Item:                      item,
+		ExpressionAttributeNames:  p.expr.names,
+		ExpressionAttributeValues: p.expr.values,
+		TableName:                 aws.String(p.spec.TableName),
+	}, nil
+}
+
 func (p *Put) Condition(expr string, values ...interface{}) *Put {
 	if err := p.expr.Condition(expr, values...); err != nil {
 		p.err = err
@@ -26,19 +41,12 @@ func (p *Put) Condition(expr string, values ...interface{}) *Put {
 }
 
 func (p *Put) RunWithContext(ctx context.Context) error {
-	item, err := marshalMap(p.value)
+	input, err := p.PutItemInput()
 	if err != nil {
 		return err
 	}
 
-	input := dynamodb.PutItemInput{
-		ConditionExpression:       p.expr.ConditionExpression(),
-		Item:                      item,
-		ExpressionAttributeNames:  p.expr.names,
-		ExpressionAttributeValues: p.expr.values,
-		TableName:                 aws.String(p.spec.TableName),
-	}
-	output, err := p.api.PutItemWithContext(ctx, &input)
+	output, err := p.api.PutItemWithContext(ctx, input)
 	if err != nil {
 		return err
 	}
