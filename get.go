@@ -18,10 +18,10 @@ type Get struct {
 	consumed       *ConsumedCapacity
 }
 
-func (g *Get) makeGetItemInput() (*dynamodb.GetItemInput, error) {
+func (g *Get) GetItemInput() (*dynamodb.GetItemInput, error) {
 	key, err := makeKey(g.spec, g.hashKey, g.rangeKey)
 	if err != nil {
-
+		return nil, err
 	}
 
 	return &dynamodb.GetItemInput{
@@ -43,7 +43,7 @@ func (g *Get) ConsistentRead(enabled bool) *Get {
 }
 
 func (g *Get) ScanWithContext(ctx context.Context, v interface{}) error {
-	input, err := g.makeGetItemInput()
+	input, err := g.GetItemInput()
 	if err != nil {
 		return err
 	}

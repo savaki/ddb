@@ -130,7 +130,7 @@ func TestGet_ConsistentRead(t *testing.T) {
 		spec: &tableSpec{TableName: "example"},
 	}
 	g.ConsistentRead(true)
-	input, err := g.makeGetItemInput()
+	input, err := g.GetItemInput()
 	if err != nil {
 		t.Fatalf("got %v; want nil", err)
 	}
