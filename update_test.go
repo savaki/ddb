@@ -28,7 +28,7 @@ func TestUpdate_Add(t *testing.T) {
 			t.Fatalf("got %v; want nil", update.err)
 		}
 
-		input, err := update.makeUpdateItemInput()
+		input, err := update.UpdateItemInput()
 		if err != nil {
 			t.Fatalf("got %v; want nil", err)
 		}
@@ -50,7 +50,7 @@ func TestUpdate_Delete(t *testing.T) {
 			t.Fatalf("got %v; want nil", update.err)
 		}
 
-		input, err := update.makeUpdateItemInput()
+		input, err := update.UpdateItemInput()
 		if err != nil {
 			t.Fatalf("got %v; want nil", err)
 		}
@@ -72,7 +72,7 @@ func TestUpdate_Remove(t *testing.T) {
 			t.Fatalf("got %v; want nil", update.err)
 		}
 
-		input, err := update.makeUpdateItemInput()
+		input, err := update.UpdateItemInput()
 		if err != nil {
 			t.Fatalf("got %v; want nil", err)
 		}
@@ -94,7 +94,7 @@ func TestUpdate_Set(t *testing.T) {
 			t.Fatalf("got %v; want nil", update.err)
 		}
 
-		input, err := update.makeUpdateItemInput()
+		input, err := update.UpdateItemInput()
 		if err != nil {
 			t.Fatalf("got %v; want nil", err)
 		}
@@ -113,7 +113,7 @@ func TestUpdate_Set(t *testing.T) {
 			t.Fatalf("got %v; want nil", update.err)
 		}
 
-		input, err := update.makeUpdateItemInput()
+		input, err := update.UpdateItemInput()
 		if err != nil {
 			t.Fatalf("got %v; want nil", err)
 		}
@@ -132,7 +132,7 @@ func TestUpdate_Set(t *testing.T) {
 			t.Fatalf("got %v; want nil", update.err)
 		}
 
-		input, err := update.makeUpdateItemInput()
+		input, err := update.UpdateItemInput()
 		if err != nil {
 			t.Fatalf("got %v; want nil", err)
 		}

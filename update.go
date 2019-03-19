@@ -19,7 +19,7 @@ type Update struct {
 	expr           *expression
 }
 
-func (u *Update) makeUpdateItemInput() (*dynamodb.UpdateItemInput, error) {
+func (u *Update) UpdateItemInput() (*dynamodb.UpdateItemInput, error) {
 	key, err := makeKey(u.spec, u.hashKey, u.rangeKey)
 	if err != nil {
 		return nil, err
@@ -88,7 +88,7 @@ func (u *Update) RunWithContext(ctx context.Context) error {
 		return u.err
 	}
 
-	input, err := u.makeUpdateItemInput()
+	input, err := u.UpdateItemInput()
 	if err != nil {
 		return err
 	}
