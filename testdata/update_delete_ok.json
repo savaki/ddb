@@ -4,10 +4,10 @@
   "ConditionalOperator": null,
   "Expected": null,
   "ExpressionAttributeNames": {
-    "#Count": "Count"
+    "#n1": "Count"
   },
   "ExpressionAttributeValues": {
-    ":f1": {
+    ":v1": {
       "B": null,
       "BOOL": null,
       "BS": null,
@@ -50,5 +50,5 @@
   "ReturnItemCollectionMetrics": null,
   "ReturnValues": null,
   "TableName": "example",
-  "UpdateExpression": "Delete #Count == :f1"
+  "UpdateExpression": "Delete #n1 == :v1"
 }

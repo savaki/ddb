@@ -1,12 +1,13 @@
 {
-  "ConditionExpression": "#Field \u003e :f1 and #Field \u003c :f2",
+  "ConditionExpression": "#n1 \u003e :v1 and #n2 \u003c :v2",
   "ConditionalOperator": null,
   "Expected": null,
   "ExpressionAttributeNames": {
-    "#Field": "Field"
+    "#n1": "Field",
+    "#n2": "Field"
   },
   "ExpressionAttributeValues": {
-    ":f1": {
+    ":v1": {
       "B": null,
       "BOOL": null,
       "BS": null,
@@ -18,7 +19,7 @@
       "S": null,
       "SS": null
     },
-    ":f2": {
+    ":v2": {
       "B": null,
       "BOOL": null,
       "BS": null,
@@ -62,4 +63,3 @@
   "ReturnValues": null,
   "TableName": "example"
 }
-            

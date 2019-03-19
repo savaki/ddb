@@ -4,10 +4,10 @@
   "ConsistentRead": true,
   "ExclusiveStartKey": null,
   "ExpressionAttributeNames": {
-    "#Date": "Date"
+    "#n1": "Date"
   },
   "ExpressionAttributeValues": {
-    ":f1": {
+    ":v1": {
       "B": null,
       "BOOL": null,
       "BS": null,
@@ -22,7 +22,7 @@
   },
   "FilterExpression": null,
   "IndexName": "index",
-  "KeyConditionExpression": "#Date = :f1",
+  "KeyConditionExpression": "#n1 = :v1",
   "KeyConditions": null,
   "Limit": null,
   "ProjectionExpression": null,

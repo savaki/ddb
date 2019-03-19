@@ -4,7 +4,7 @@
   "ConditionalOperator": null,
   "Expected": null,
   "ExpressionAttributeNames": {
-    "#Count": "Count"
+    "#n1": "Count"
   },
   "ExpressionAttributeValues": null,
   "Key": {
@@ -37,5 +37,5 @@
   "ReturnItemCollectionMetrics": null,
   "ReturnValues": null,
   "TableName": "example",
-  "UpdateExpression": "Remove #Count"
+  "UpdateExpression": "Remove #n1"
 }

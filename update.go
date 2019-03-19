@@ -29,8 +29,8 @@ func (u *Update) makeUpdateItemInput() (*dynamodb.UpdateItemInput, error) {
 	updateExpression := u.expr.UpdateExpression()
 	return &dynamodb.UpdateItemInput{
 		ConditionExpression:       conditionExpression,
-		ExpressionAttributeNames:  u.expr.names,
-		ExpressionAttributeValues: u.expr.values,
+		ExpressionAttributeNames:  u.expr.Names,
+		ExpressionAttributeValues: u.expr.Values,
 		Key:                       key,
 		ReturnConsumedCapacity:    aws.String(dynamodb.ReturnConsumedCapacityTotal),
 		TableName:                 aws.String(u.spec.TableName),

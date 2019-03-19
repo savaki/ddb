@@ -15,40 +15,6 @@ type UpdateTable struct {
 	Count int
 }
 
-func TestReKeys(t *testing.T) {
-	t.Run("simple", func(t *testing.T) {
-		matches := reKeys.FindAllStringSubmatch("hello #world 123", -1)
-		if got, want := len(matches), 1; got != want {
-			t.Fatalf("got %v; want %v", got, want)
-		}
-		if got, want := len(matches[0]), 2; got != want {
-			t.Fatalf("got %v; want %v", got, want)
-		}
-		if got, want := matches[0][1], "#world"; got != want {
-			t.Fatalf("got %v; want %v", got, want)
-		}
-	})
-
-	t.Run("simple", func(t *testing.T) {
-		matches := reKeys.FindAllStringSubmatch("abc #hello #world", -1)
-		if got, want := len(matches), 2; got != want {
-			t.Fatalf("got %v; want %v", got, want)
-		}
-		if got, want := len(matches[0]), 2; got != want {
-			t.Fatalf("got %v; want %v", got, want)
-		}
-		if got, want := matches[0][1], "#hello"; got != want {
-			t.Fatalf("got %v; want %v", got, want)
-		}
-		if got, want := len(matches[1]), 2; got != want {
-			t.Fatalf("got %v; want %v", got, want)
-		}
-		if got, want := matches[1][1], "#world"; got != want {
-			t.Fatalf("got %v; want %v", got, want)
-		}
-	})
-}
-
 func TestUpdate_Add(t *testing.T) {
 	const tableName = "example"
 
@@ -172,19 +138,6 @@ func TestUpdate_Set(t *testing.T) {
 		}
 
 		assertEqual(t, input, "testdata/update_set_multiple.json")
-	})
-
-	t.Run("invalid attribute", func(t *testing.T) {
-		table := New(nil).MustTable(tableName, UpdateTable{})
-		update := table.Update("hello").Range("world")
-
-		// When
-		update.Set("#junk = ?", 123)
-		err := update.Run()
-
-		if !IsInvalidFieldNameError(err) {
-			t.Fatalf("got %v; want true", err)
-		}
 	})
 }
 

@@ -54,8 +54,8 @@ func (d *Delete) RunWithContext(ctx context.Context) error {
 	conditionExpression := d.expr.ConditionExpression()
 	input := dynamodb.DeleteItemInput{
 		ConditionExpression:       conditionExpression,
-		ExpressionAttributeNames:  d.expr.names,
-		ExpressionAttributeValues: d.expr.values,
+		ExpressionAttributeNames:  d.expr.Names,
+		ExpressionAttributeValues: d.expr.Values,
 		Key:                       key,
 		ReturnConsumedCapacity:    aws.String(dynamodb.ReturnConsumedCapacityTotal),
 		TableName:                 aws.String(d.spec.TableName),

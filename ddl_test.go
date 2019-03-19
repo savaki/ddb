@@ -147,7 +147,7 @@ func assertEqual(t *testing.T, v interface{}, filename string) {
 	}
 
 	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("#-- got ----------------\n%v\n#-- want ----------------\n%v", prettyJSON(got), prettyJSON(want))
+		t.Fatalf("#-- got %v\n#-- want %v %v", prettyJSON(got), filename, prettyJSON(want))
 	}
 }
 

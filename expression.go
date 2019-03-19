@@ -1,9 +1,7 @@
 package ddb
 
 import (
-	"bytes"
-	"reflect"
-	"regexp"
+	"fmt"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -12,54 +10,45 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 )
 
-var (
-	reKeys   = regexp.MustCompile(`(#[a-zA-Z][a-zA-Z0-9._]*)`)
-	reValues = regexp.MustCompile(`\?`)
-)
-
 type expression struct {
 	attributes []*attributeSpec
-	names      map[string]*string
-	values     map[string]*dynamodb.AttributeValue
+	Names      map[string]*string
+	Values     map[string]*dynamodb.AttributeValue
 	index      int64
 
-	adds       *bytes.Buffer
-	conditions *bytes.Buffer
-	deletes    *bytes.Buffer
-	removes    *bytes.Buffer
-	sets       *bytes.Buffer
+	Adds       *strings.Builder
+	Conditions *strings.Builder
+	Deletes    *strings.Builder
+	Removes    *strings.Builder
+	Sets       *strings.Builder
 }
 
-func (e *expression) setExpressionAttributeName(name string) (string, error) {
-	if e.names == nil {
-		e.names = map[string]*string{}
+func (e *expression) addExpressionAttributeName(name string) string {
+	if e.Names == nil {
+		e.Names = map[string]*string{}
 	}
 
+	key := "#n" + strconv.Itoa(len(e.Names)+1)
 	for _, attr := range e.attributes {
-		switch name[1:] {
-		case attr.AttributeName:
-			name = "#" + attr.FieldName
-		case attr.FieldName:
-			// ok
-		default:
-			continue
+		switch name {
+		case attr.AttributeName, attr.FieldName:
+			e.Names[key] = aws.String(attr.AttributeName)
+			return key
 		}
-
-		e.names[name] = aws.String(attr.AttributeName)
-		return name, nil
 	}
 
-	return "", errorf(ErrInvalidFieldName, "invalid field name, %v", name)
+	e.Names[key] = aws.String(name)
+	return key
 }
 
-func (e *expression) setExpressionAttributeValue(item *dynamodb.AttributeValue) string {
-	if e.values == nil {
-		e.values = map[string]*dynamodb.AttributeValue{}
+func (e *expression) addExpressionAttributeValue(item *dynamodb.AttributeValue) string {
+	if e.Values == nil {
+		e.Values = map[string]*dynamodb.AttributeValue{}
 	}
 
 	id := atomic.AddInt64(&e.index, 1)
-	name := ":f" + strconv.FormatInt(id, 10)
-	e.values[name] = item
+	name := ":v" + strconv.FormatInt(id, 10)
+	e.Values[name] = item
 
 	return name
 }
@@ -67,89 +56,58 @@ func (e *expression) setExpressionAttributeValue(item *dynamodb.AttributeValue) 
 func (e *expression) UpdateExpression() *string {
 	padding := 3
 	size := 0
-	if e.adds != nil {
-		size += e.adds.Len() + padding
+	if e.Adds != nil {
+		size += e.Adds.Len() + padding
 	}
-	if e.deletes != nil {
-		size += e.deletes.Len() + padding
+	if e.Deletes != nil {
+		size += e.Deletes.Len() + padding
 	}
-	if e.removes != nil {
-		size += e.removes.Len() + padding
+	if e.Removes != nil {
+		size += e.Removes.Len() + padding
 	}
-	if e.sets != nil {
-		size += e.sets.Len() + padding
+	if e.Sets != nil {
+		size += e.Sets.Len() + padding
 	}
 
 	if size == 0 {
 		return nil
 	}
 
-	buf := bytes.NewBuffer(make([]byte, 0, size))
-	if e.adds != nil {
-		buf.Write(e.adds.Bytes())
+	buf := &strings.Builder{} //make([]byte, 0, size))
+	buf.Grow(size)
+	if e.Adds != nil {
+		buf.WriteString(e.Adds.String())
 		buf.WriteString(" ")
 	}
-	if e.deletes != nil {
-		buf.Write(e.deletes.Bytes())
+	if e.Deletes != nil {
+		buf.WriteString(e.Deletes.String())
 		buf.WriteString(" ")
 	}
-	if e.removes != nil {
-		buf.Write(e.removes.Bytes())
+	if e.Removes != nil {
+		buf.WriteString(e.Removes.String())
 		buf.WriteString(" ")
 	}
-	if e.sets != nil {
-		buf.Write(e.sets.Bytes())
+	if e.Sets != nil {
+		buf.WriteString(e.Sets.String())
 		buf.WriteString(" ")
 	}
 
-	buf.Truncate(buf.Len() - 1) // strip off trailing space
-	return aws.String(buf.String())
+	expr := buf.String()
+	return aws.String(expr[0 : len(expr)-1])
 }
 
 func (e *expression) ConditionExpression() *string {
-	if e.conditions == nil {
+	if e.Conditions == nil {
 		return nil
 	}
 
-	return aws.String(e.conditions.String())
+	return aws.String(e.Conditions.String())
 }
 
-func (e *expression) append(buf *bytes.Buffer, keyword, separator, expr string, values ...interface{}) error {
-	var items []*dynamodb.AttributeValue
-	for _, value := range values {
-		item, err := marshal(value)
-		if err != nil {
-			return wrapf(err, ErrUnableToMarshalItem, "unable to marshal %v", reflect.TypeOf(value))
-		}
-
-		items = append(items, item)
-	}
-
-	// names
-	//
-	matches := reKeys.FindAllStringSubmatch(expr, -1)
-	for _, match := range matches {
-		name := match[1]
-		updatedName, err := e.setExpressionAttributeName(name)
-		if err != nil {
-			return err
-		}
-
-		if name != updatedName {
-			expr = strings.Replace(expr, name, updatedName, -1)
-		}
-	}
-
-	// values
-	//
-	matches = reValues.FindAllStringSubmatch(expr, -1)
-	if len(matches) != len(values) {
-		return errorf(ErrMismatchedValueCount, "Set expression, %v, contains %v values, but received %v values", expr, len(matches), len(values))
-	}
-	for index := range matches {
-		item := items[index]
-		fieldName := e.setExpressionAttributeValue(item)
-		expr = strings.Replace(expr, "?", fieldName, 1)
+func (e *expression) append(buf *strings.Builder, keyword, separator, expr string, values ...interface{}) error {
+	expr, err := e.parse(expr, values...)
+	if err != nil {
+		return err
 	}
 
 	// expr
@@ -170,36 +128,122 @@ func (e *expression) append(buf *bytes.Buffer, keyword, separator, expr string, 
 const comma = ", "
 
 func (e *expression) Add(expr string, values ...interface{}) error {
-	if e.adds == nil {
-		e.adds = bytes.NewBuffer(make([]byte, 0, 128))
+	if e.Adds == nil {
+		e.Adds = &strings.Builder{}
+		e.Adds.Grow(128)
 	}
-	return e.append(e.adds, "Add", comma, expr, values...)
+	return e.append(e.Adds, "Add", comma, expr, values...)
 }
 
 func (e *expression) Condition(expr string, values ...interface{}) error {
-	if e.conditions == nil {
-		e.conditions = bytes.NewBuffer(make([]byte, 0, 128))
+	if e.Conditions == nil {
+		e.Conditions = &strings.Builder{}
+		e.Conditions.Grow(123)
 	}
-	return e.append(e.conditions, "", " and ", expr, values...)
+	return e.append(e.Conditions, "", " and ", expr, values...)
 }
 
 func (e *expression) Delete(expr string, values ...interface{}) error {
-	if e.deletes == nil {
-		e.deletes = bytes.NewBuffer(make([]byte, 0, 128))
+	if e.Deletes == nil {
+		e.Deletes = &strings.Builder{}
+		e.Deletes.Grow(128)
 	}
-	return e.append(e.deletes, "Delete", comma, expr, values...)
+	return e.append(e.Deletes, "Delete", comma, expr, values...)
 }
 
 func (e *expression) Remove(expr string, values ...interface{}) error {
-	if e.removes == nil {
-		e.removes = bytes.NewBuffer(make([]byte, 0, 128))
+	if e.Removes == nil {
+		e.Removes = &strings.Builder{}
+		e.Removes.Grow(128)
 	}
-	return e.append(e.removes, "Remove", comma, expr, values...)
+	return e.append(e.Removes, "Remove", comma, expr, values...)
 }
 
 func (e *expression) Set(expr string, values ...interface{}) error {
-	if e.sets == nil {
-		e.sets = bytes.NewBuffer(make([]byte, 0, 128))
+	if e.Sets == nil {
+		e.Sets = &strings.Builder{}
+		e.Sets.Grow(128)
 	}
-	return e.append(e.sets, "Set", comma, expr, values...)
+	return e.append(e.Sets, "Set", comma, expr, values...)
+}
+
+func (e *expression) parse(expr string, values ...interface{}) (string, error) {
+	var (
+		inName  bool
+		index   int
+		buf     = &strings.Builder{}
+		bufName = &strings.Builder{}
+	)
+
+	buf.Grow(len(expr) * 2)
+	for _, v := range expr {
+		if inName {
+			if isAlphaNumeric(v) {
+				bufName.WriteRune(v)
+				continue
+
+			} else if v == '?' {
+				if index >= len(values) {
+					return "", errorf(ErrMismatchedValueCount, "not enough values")
+				}
+
+				name, ok := values[index].(string)
+				if !ok {
+					return "", fmt.Errorf("expected value[%v] to be a string", index)
+				}
+				index++
+
+				key := e.addExpressionAttributeName(name)
+				buf.WriteString(key)
+
+				inName = false
+				bufName.Reset()
+				continue
+
+			} else {
+				key := e.addExpressionAttributeName(bufName.String())
+				buf.WriteString(key)
+				inName = false
+				bufName.Reset()
+			}
+		}
+
+		switch v {
+		case '?':
+			if index >= len(values) {
+				return "", errorf(ErrMismatchedValueCount, "not enough values")
+			}
+
+			item, err := marshal(values[index])
+			if err != nil {
+				return "", fmt.Errorf("unable to marshal value: %v", err)
+			}
+			index++
+
+			key := e.addExpressionAttributeValue(item)
+			buf.WriteString(key)
+
+		case '#':
+			inName = true
+			bufName.Reset()
+
+		default:
+			buf.WriteRune(v)
+		}
+	}
+
+	if bufName.Len() > 0 {
+		key := e.addExpressionAttributeName(bufName.String())
+		buf.WriteString(key)
+	}
+
+	if got, want := len(values), index; got != want {
+		return "", fmt.Errorf("mismatched number of values; got %v, want %v", got, want)
+	}
+
+	return buf.String(), nil
+}
+
+func isAlphaNumeric(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')
 }

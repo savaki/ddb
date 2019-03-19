@@ -32,8 +32,8 @@ func (q *Query) makeQueryInput() *dynamodb.QueryInput {
 	input := dynamodb.QueryInput{
 		ConsistentRead:            aws.Bool(q.consistentRead),
 		KeyConditionExpression:    conditionExpression,
-		ExpressionAttributeNames:  q.expr.names,
-		ExpressionAttributeValues: q.expr.values,
+		ExpressionAttributeNames:  q.expr.Names,
+		ExpressionAttributeValues: q.expr.Values,
 		IndexName:                 indexName,
 		ReturnConsumedCapacity:    aws.String(dynamodb.ReturnConsumedCapacityTotal),
 		ScanIndexForward:          aws.Bool(q.scanIndexForward),

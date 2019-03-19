@@ -1,12 +1,12 @@
 {
-  "ConditionExpression": "#ID != :f1",
+  "ConditionExpression": "#n1 != :v1",
   "ConditionalOperator": null,
   "Expected": null,
   "ExpressionAttributeNames": {
-    "#ID": "ID"
+    "#n1": "ID"
   },
   "ExpressionAttributeValues": {
-    ":f1": {
+    ":v1": {
       "B": null,
       "BOOL": null,
       "BS": null,

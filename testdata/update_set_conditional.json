@@ -1,13 +1,14 @@
 {
   "AttributeUpdates": null,
-  "ConditionExpression": "#A == :f1",
+  "ConditionExpression": "#n1 == :v1",
   "ConditionalOperator": null,
   "Expected": null,
   "ExpressionAttributeNames": {
-    "#A": "a"
+    "#n1": "a",
+    "#n2": "a"
   },
   "ExpressionAttributeValues": {
-    ":f1": {
+    ":v1": {
       "B": null,
       "BOOL": null,
       "BS": null,
@@ -19,7 +20,7 @@
       "S": "blah",
       "SS": null
     },
-    ":f2": {
+    ":v2": {
       "B": null,
       "BOOL": null,
       "BS": null,
@@ -62,6 +63,5 @@
   "ReturnItemCollectionMetrics": null,
   "ReturnValues": null,
   "TableName": "example",
-  "UpdateExpression": "Set #A = :f2"
+  "UpdateExpression": "Set #n2 = :v2"
 }
-            

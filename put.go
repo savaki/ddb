@@ -26,8 +26,8 @@ func (p *Put) PutItemInput() (*dynamodb.PutItemInput, error) {
 	return &dynamodb.PutItemInput{
 		ConditionExpression:       p.expr.ConditionExpression(),
 		Item:                      item,
-		ExpressionAttributeNames:  p.expr.names,
-		ExpressionAttributeValues: p.expr.values,
+		ExpressionAttributeNames:  p.expr.Names,
+		ExpressionAttributeValues: p.expr.Values,
 		TableName:                 aws.String(p.spec.TableName),
 	}, nil
 }

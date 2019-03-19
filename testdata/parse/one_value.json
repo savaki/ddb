@@ -1,0 +1,22 @@
+{
+  "Adds": null,
+  "Conditions": null,
+  "Deletes": null,
+  "Names": null,
+  "Removes": null,
+  "Sets": null,
+  "Values": {
+    ":v1": {
+      "B": null,
+      "BOOL": null,
+      "BS": null,
+      "L": null,
+      "M": null,
+      "N": null,
+      "NS": null,
+      "NULL": null,
+      "S": "world",
+      "SS": null
+    }
+  }
+}

@@ -1,9 +1,9 @@
 {
-  "ConditionExpression": "attribute_not_exists(#Field)",
+  "ConditionExpression": "attribute_not_exists(#n1)",
   "ConditionalOperator": null,
   "Expected": null,
   "ExpressionAttributeNames": {
-    "#Field": "Field"
+    "#n1": "Field"
   },
   "ExpressionAttributeValues": null,
   "Item": {
