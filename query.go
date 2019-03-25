@@ -11,8 +11,6 @@ import (
 type Query struct {
 	api              dynamodbiface.DynamoDBAPI
 	spec             *tableSpec
-	hashKey          interface{}
-	rangeKey         interface{}
 	consistentRead   bool
 	scanIndexForward bool
 	consumed         *ConsumedCapacity
@@ -112,14 +110,14 @@ func (q *Query) ScanIndexForward(enabled bool) *Query {
 	return q
 }
 
-func (t *Table) Query(hashKey interface{}) *Query {
-	return &Query{
+func (t *Table) Query(expr string, values ...interface{}) *Query {
+	query := &Query{
 		api:      t.ddb.api,
 		spec:     t.spec,
-		hashKey:  hashKey,
 		consumed: t.consumed,
 		expr: &expression{
 			attributes: t.spec.Attributes,
 		},
 	}
+	return query.KeyCondition(expr, values...)
 }
