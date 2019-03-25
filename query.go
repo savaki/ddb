@@ -22,7 +22,7 @@ type Query struct {
 	attributes       []string
 }
 
-func (q *Query) QueryInput() *dynamodb.QueryInput {
+func (q *Query) QueryInput() (*dynamodb.QueryInput, error) {
 	var indexName *string
 	if q.indexName != "" {
 		indexName = aws.String(q.indexName)
@@ -40,7 +40,7 @@ func (q *Query) QueryInput() *dynamodb.QueryInput {
 		Select:                    aws.String(dynamodb.SelectAllAttributes),
 		TableName:                 aws.String(q.spec.TableName),
 	}
-	return &input
+	return &input, nil
 }
 
 func (q *Query) ConsistentRead(enabled bool) *Query {
@@ -66,8 +66,12 @@ func (q *Query) EachWithContext(ctx context.Context, fn func(item Item) (bool, e
 		return q.err
 	}
 
+	input, err := q.QueryInput()
+	if err != nil {
+		return err
+	}
+
 	var startKey map[string]*dynamodb.AttributeValue
-	var input = q.QueryInput()
 	for {
 		input.ExclusiveStartKey = startKey
 
