@@ -22,7 +22,7 @@ type Query struct {
 	attributes       []string
 }
 
-func (q *Query) makeQueryInput() *dynamodb.QueryInput {
+func (q *Query) QueryInput() *dynamodb.QueryInput {
 	var indexName *string
 	if q.indexName != "" {
 		indexName = aws.String(q.indexName)
@@ -67,7 +67,7 @@ func (q *Query) EachWithContext(ctx context.Context, fn func(item Item) (bool, e
 	}
 
 	var startKey map[string]*dynamodb.AttributeValue
-	var input = q.makeQueryInput()
+	var input = q.QueryInput()
 	for {
 		input.ExclusiveStartKey = startKey
 
