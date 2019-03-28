@@ -9,14 +9,15 @@ import (
 )
 
 type Update struct {
-	api            dynamodbiface.DynamoDBAPI
-	spec           *tableSpec
-	hashKey        interface{}
-	rangeKey       interface{}
-	consistentRead bool
-	consumed       *ConsumedCapacity
-	err            error
-	expr           *expression
+	api                                 dynamodbiface.DynamoDBAPI
+	spec                                *tableSpec
+	hashKey                             interface{}
+	rangeKey                            interface{}
+	consistentRead                      bool
+	consumed                            *ConsumedCapacity
+	err                                 error
+	expr                                *expression
+	returnValuesOnConditionCheckFailure string
 }
 
 func (u *Update) UpdateItemInput() (*dynamodb.UpdateItemInput, error) {
@@ -36,6 +37,29 @@ func (u *Update) UpdateItemInput() (*dynamodb.UpdateItemInput, error) {
 		TableName:                 aws.String(u.spec.TableName),
 		UpdateExpression:          updateExpression,
 	}, nil
+}
+
+func (u *Update) Tx() (*dynamodb.TransactWriteItem, error) {
+	input, err := u.UpdateItemInput()
+	if err != nil {
+		return nil, err
+	}
+
+	writeItem := dynamodb.TransactWriteItem{
+		Update: &dynamodb.Update{
+			ConditionExpression:       input.ConditionExpression,
+			ExpressionAttributeNames:  input.ExpressionAttributeNames,
+			ExpressionAttributeValues: input.ExpressionAttributeValues,
+			Key:                       input.Key,
+			TableName:                 input.TableName,
+			UpdateExpression:          input.UpdateExpression,
+		},
+	}
+	if v := u.returnValuesOnConditionCheckFailure; v != "" {
+		writeItem.Update.ReturnValuesOnConditionCheckFailure = aws.String(v)
+	}
+
+	return &writeItem, nil
 }
 
 func (u *Update) Add(expr string, values ...interface{}) *Update {
@@ -72,6 +96,11 @@ func (u *Update) Remove(expr string, values ...interface{}) *Update {
 		u.err = err
 	}
 
+	return u
+}
+
+func (u *Update) ReturnValuesOnConditionCheckFailure(value string) *Update {
+	u.returnValuesOnConditionCheckFailure = value
 	return u
 }
 

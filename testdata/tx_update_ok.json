@@ -1,0 +1,49 @@
+{
+  "ClientRequestToken": "def",
+  "ReturnConsumedCapacity": null,
+  "ReturnItemCollectionMetrics": null,
+  "TransactItems": [
+    {
+      "ConditionCheck": null,
+      "Delete": null,
+      "Put": null,
+      "Update": {
+        "ConditionExpression": null,
+        "ExpressionAttributeNames": {
+          "#n1": "Name"
+        },
+        "ExpressionAttributeValues": {
+          ":v1": {
+            "B": null,
+            "BOOL": null,
+            "BS": null,
+            "L": null,
+            "M": null,
+            "N": null,
+            "NS": null,
+            "NULL": null,
+            "S": "def",
+            "SS": null
+          }
+        },
+        "Key": {
+          "ID": {
+            "B": null,
+            "BOOL": null,
+            "BS": null,
+            "L": null,
+            "M": null,
+            "N": null,
+            "NS": null,
+            "NULL": null,
+            "S": "abc",
+            "SS": null
+          }
+        },
+        "ReturnValuesOnConditionCheckFailure": "NONE",
+        "TableName": "blah",
+        "UpdateExpression": "Set #n1 = :v1"
+      }
+    }
+  ]
+}

@@ -19,7 +19,7 @@ func TestQuery(t *testing.T) {
 			table = New(mock).MustTable("example", QueryExample{})
 		)
 
-		query := table.Query(want.ID)
+		query := table.Query("#ID = ?", want.ID)
 		query.IndexName("index")
 		query.KeyCondition("#Date = ?", want.Date)
 		query.ConsistentRead(true)

@@ -23,13 +23,53 @@ import (
 )
 
 type Delete struct {
-	api      dynamodbiface.DynamoDBAPI
-	spec     *tableSpec
-	hashKey  interface{}
-	rangeKey interface{}
-	consumed *ConsumedCapacity
-	err      error
-	expr     *expression
+	api                                 dynamodbiface.DynamoDBAPI
+	spec                                *tableSpec
+	hashKey                             interface{}
+	rangeKey                            interface{}
+	consumed                            *ConsumedCapacity
+	err                                 error
+	expr                                *expression
+	returnValuesOnConditionCheckFailure string
+}
+
+func (d *Delete) DeleteItemInput() (*dynamodb.DeleteItemInput, error) {
+	key, err := makeKey(d.spec, d.hashKey, d.rangeKey)
+	if err != nil {
+		return nil, err
+	}
+
+	conditionExpression := d.expr.ConditionExpression()
+	return &dynamodb.DeleteItemInput{
+		ConditionExpression:       conditionExpression,
+		ExpressionAttributeNames:  d.expr.Names,
+		ExpressionAttributeValues: d.expr.Values,
+		Key:                       key,
+		ReturnConsumedCapacity:    aws.String(dynamodb.ReturnConsumedCapacityTotal),
+		TableName:                 aws.String(d.spec.TableName),
+	}, nil
+}
+
+func (d *Delete) Tx() (*dynamodb.TransactWriteItem, error) {
+	input, err := d.DeleteItemInput()
+	if err != nil {
+		return nil, err
+	}
+
+	writeItem := dynamodb.TransactWriteItem{
+		Delete: &dynamodb.Delete{
+			ConditionExpression:       input.ConditionExpression,
+			ExpressionAttributeNames:  input.ExpressionAttributeNames,
+			ExpressionAttributeValues: input.ExpressionAttributeValues,
+			Key:                       input.Key,
+			TableName:                 input.TableName,
+		},
+	}
+	if v := d.returnValuesOnConditionCheckFailure; v != "" {
+		writeItem.Delete.ReturnValuesOnConditionCheckFailure = aws.String(v)
+	}
+
+	return &writeItem, nil
 }
 
 func (d *Delete) Condition(expr string, values ...interface{}) *Delete {
@@ -40,28 +80,28 @@ func (d *Delete) Condition(expr string, values ...interface{}) *Delete {
 	return d
 }
 
+// Use ReturnValuesOnConditionCheckFailure to get the item attributes if the
+// Delete condition fails. For ReturnValuesOnConditionCheckFailure, the valid
+// values are: NONE and ALL_OLD.
+//
+// Only used by Tx()
+func (d *Delete) ReturnValuesOnConditionCheckFailure(value string) *Delete {
+	d.returnValuesOnConditionCheckFailure = value
+	return d
+}
+
 func (d *Delete) Range(rangeKey interface{}) *Delete {
 	d.rangeKey = rangeKey
 	return d
 }
 
 func (d *Delete) RunWithContext(ctx context.Context) error {
-	key, err := makeKey(d.spec, d.hashKey, d.rangeKey)
+	input, err := d.DeleteItemInput()
 	if err != nil {
 		return err
 	}
 
-	conditionExpression := d.expr.ConditionExpression()
-	input := dynamodb.DeleteItemInput{
-		ConditionExpression:       conditionExpression,
-		ExpressionAttributeNames:  d.expr.Names,
-		ExpressionAttributeValues: d.expr.Values,
-		Key:                       key,
-		ReturnConsumedCapacity:    aws.String(dynamodb.ReturnConsumedCapacityTotal),
-		TableName:                 aws.String(d.spec.TableName),
-	}
-
-	output, err := d.api.DeleteItemWithContext(ctx, &input)
+	output, err := d.api.DeleteItemWithContext(ctx, input)
 	if err != nil {
 		return err
 	}

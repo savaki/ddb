@@ -16,14 +16,22 @@ package ddb
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
+	"math/rand"
+	"strconv"
 	"sync/atomic"
+	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 )
 
-var defaultContext = context.Background()
+var (
+	defaultContext = context.Background()
+	r              = rand.New(rand.NewSource(time.Now().UnixNano()))
+)
 
 type ConsumedCapacity struct {
 	ReadUnits  int64
@@ -65,7 +73,8 @@ func (t *Table) DDB() *DDB {
 }
 
 type DDB struct {
-	api dynamodbiface.DynamoDBAPI
+	api       dynamodbiface.DynamoDBAPI
+	tokenFunc func() string
 }
 
 func (d *DDB) Table(tableName string, model interface{}) (*Table, error) {
@@ -90,8 +99,48 @@ func (d *DDB) MustTable(tableName string, model interface{}) *Table {
 	return table
 }
 
+type WriteTx interface {
+	Tx() (*dynamodb.TransactWriteItem, error)
+}
+
+func (d *DDB) TransactWriteItemsWithContext(ctx context.Context, items ...WriteTx) (*dynamodb.TransactWriteItemsOutput, error) {
+	token := d.tokenFunc()
+	input := dynamodb.TransactWriteItemsInput{
+		ClientRequestToken: aws.String(token),
+		TransactItems:      make([]*dynamodb.TransactWriteItem, 0, len(items)),
+	}
+
+	for _, item := range items {
+		i, err := item.Tx()
+		if err != nil {
+			return nil, err
+		}
+		input.TransactItems = append(input.TransactItems, i)
+	}
+
+	return d.api.TransactWriteItemsWithContext(ctx, &input)
+}
+
+func (d *DDB) TransactWriteItems(items ...WriteTx) (*dynamodb.TransactWriteItemsOutput, error) {
+	return d.TransactWriteItemsWithContext(defaultContext, items...)
+}
+
 func New(api dynamodbiface.DynamoDBAPI) *DDB {
 	return &DDB{
-		api: api,
+		api:       api,
+		tokenFunc: makeRequestToken,
 	}
+}
+
+func makeRequestToken() string {
+	var token [16]byte
+	r.Read(token[:])
+
+	var (
+		now = time.Now().UnixNano()
+		a   = binary.BigEndian.Uint64(token[0:8])
+		b   = binary.BigEndian.Uint64(token[8:])
+	)
+
+	return strconv.FormatInt(now, 36) + strconv.FormatUint(a, 36) + strconv.FormatUint(b, 36)
 }

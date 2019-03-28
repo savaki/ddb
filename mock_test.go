@@ -30,6 +30,7 @@ type Mock struct {
 	queryInput  *dynamodb.QueryInput
 	scanInput   *dynamodb.ScanInput
 	updateInput *dynamodb.UpdateItemInput
+	writeInput  *dynamodb.TransactWriteItemsInput
 }
 
 func (m *Mock) CreateTableWithContext(aws.Context, *dynamodb.CreateTableInput, ...request.Option) (*dynamodb.CreateTableOutput, error) {
@@ -122,6 +123,11 @@ func (m *Mock) ScanWithContext(ctx aws.Context, input *dynamodb.ScanInput, opts 
 	}
 
 	return &output, m.err
+}
+
+func (m *Mock) TransactWriteItemsWithContext(ctx aws.Context, input *dynamodb.TransactWriteItemsInput, opts ...request.Option) (*dynamodb.TransactWriteItemsOutput, error) {
+	m.writeInput = input
+	return &dynamodb.TransactWriteItemsOutput{}, nil
 }
 
 func (m *Mock) UpdateItemWithContext(ctx aws.Context, input *dynamodb.UpdateItemInput, opts ...request.Option) (*dynamodb.UpdateItemOutput, error) {

@@ -9,12 +9,13 @@ import (
 )
 
 type Put struct {
-	api      dynamodbiface.DynamoDBAPI
-	spec     *tableSpec
-	value    interface{}
-	consumed *ConsumedCapacity
-	err      error
-	expr     *expression
+	api                                 dynamodbiface.DynamoDBAPI
+	spec                                *tableSpec
+	value                               interface{}
+	consumed                            *ConsumedCapacity
+	err                                 error
+	expr                                *expression
+	returnValuesOnConditionCheckFailure string
 }
 
 func (p *Put) PutItemInput() (*dynamodb.PutItemInput, error) {
@@ -32,11 +33,38 @@ func (p *Put) PutItemInput() (*dynamodb.PutItemInput, error) {
 	}, nil
 }
 
+func (p *Put) Tx() (*dynamodb.TransactWriteItem, error) {
+	input, err := p.PutItemInput()
+	if err != nil {
+		return nil, err
+	}
+
+	writeItem := dynamodb.TransactWriteItem{
+		Put: &dynamodb.Put{
+			ConditionExpression:       input.ConditionExpression,
+			ExpressionAttributeNames:  input.ExpressionAttributeNames,
+			ExpressionAttributeValues: input.ExpressionAttributeValues,
+			Item:                      input.Item,
+			TableName:                 input.TableName,
+		},
+	}
+	if v := p.returnValuesOnConditionCheckFailure; v != "" {
+		writeItem.Put.ReturnValuesOnConditionCheckFailure = aws.String(v)
+	}
+
+	return &writeItem, nil
+}
+
 func (p *Put) Condition(expr string, values ...interface{}) *Put {
 	if err := p.expr.Condition(expr, values...); err != nil {
 		p.err = err
 	}
 
+	return p
+}
+
+func (p *Put) ReturnValuesOnConditionCheckFailure(value string) *Put {
+	p.returnValuesOnConditionCheckFailure = value
 	return p
 }
 

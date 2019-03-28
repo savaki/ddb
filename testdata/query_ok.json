@@ -4,10 +4,23 @@
   "ConsistentRead": true,
   "ExclusiveStartKey": null,
   "ExpressionAttributeNames": {
-    "#n1": "Date"
+    "#n1": "ID",
+    "#n2": "Date"
   },
   "ExpressionAttributeValues": {
     ":v1": {
+      "B": null,
+      "BOOL": null,
+      "BS": null,
+      "L": null,
+      "M": null,
+      "N": null,
+      "NS": null,
+      "NULL": null,
+      "S": "abc",
+      "SS": null
+    },
+    ":v2": {
       "B": null,
       "BOOL": null,
       "BS": null,
@@ -22,7 +35,7 @@
   },
   "FilterExpression": null,
   "IndexName": "index",
-  "KeyConditionExpression": "#n1 = :v1",
+  "KeyConditionExpression": "#n1 = :v1 and #n2 = :v2",
   "KeyConditions": null,
   "Limit": null,
   "ProjectionExpression": null,

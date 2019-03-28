@@ -160,6 +160,8 @@ func prettyJSON(v interface{}) string {
 }
 
 type Example struct {
+	ID   string `ddb:"hash"`
+	Name string
 }
 
 func TestCreateTable(t *testing.T) {
