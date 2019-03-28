@@ -133,14 +133,14 @@ func New(api dynamodbiface.DynamoDBAPI) *DDB {
 }
 
 func makeRequestToken() string {
-	var token [16]byte
+	var token [12]byte
 	r.Read(token[:])
 
 	var (
-		now = time.Now().UnixNano()
+		now = time.Now().UnixNano() / int64(time.Microsecond)
 		a   = binary.BigEndian.Uint64(token[0:8])
-		b   = binary.BigEndian.Uint64(token[8:])
+		b   = binary.BigEndian.Uint32(token[8:])
 	)
 
-	return strconv.FormatInt(now, 36) + strconv.FormatUint(a, 36) + strconv.FormatUint(b, 36)
+	return strconv.FormatInt(now, 36) + strconv.FormatUint(a, 36) + strconv.FormatUint(uint64(b), 36)
 }
