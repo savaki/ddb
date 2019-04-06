@@ -35,7 +35,7 @@
   },
   "ReturnConsumedCapacity": "TOTAL",
   "ReturnItemCollectionMetrics": null,
-  "ReturnValues": null,
+  "ReturnValues": "NONE",
   "TableName": "example",
   "UpdateExpression": "Remove #n1"
 }

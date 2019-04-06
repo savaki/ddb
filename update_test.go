@@ -59,6 +59,104 @@ func TestUpdate_Delete(t *testing.T) {
 	})
 }
 
+func TestUpdate_NewValues(t *testing.T) {
+	const tableName = "example"
+
+	t.Run("verify input", func(t *testing.T) {
+		table := New(nil).MustTable(tableName, UpdateTable{})
+		update := table.Update("hello").
+			Range("world").
+			Set("#A = ?", "blah").
+			NewValues(&UpdateTable{})
+
+		input, err := update.UpdateItemInput()
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+
+		assertEqual(t, input, "testdata/update_new_values_ok.json")
+	})
+
+	t.Run("old values", func(t *testing.T) {
+		var (
+			want = "abc"
+			m    = &Mock{
+				updateItem: UpdateTable{A: want},
+			}
+			table     = New(m).MustTable(tableName, UpdateTable{})
+			oldValues UpdateTable
+		)
+
+		err := table.Update("key").
+			OldValues(&oldValues).
+			Run()
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+		if got := oldValues.A; got != want {
+			t.Fatalf("got %v; want %v", got, want)
+		}
+	})
+
+	t.Run("new values", func(t *testing.T) {
+		var (
+			want = "abc"
+			m    = &Mock{
+				updateItem: UpdateTable{A: want},
+			}
+			table     = New(m).MustTable(tableName, UpdateTable{})
+			newValues UpdateTable
+		)
+
+		err := table.Update("key").
+			NewValues(&newValues).
+			Run()
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+		if got := newValues.A; got != want {
+			t.Fatalf("got %v; want %v", got, want)
+		}
+	})
+}
+
+func TestUpdate_OldValues(t *testing.T) {
+	const tableName = "example"
+
+	t.Run("verify input", func(t *testing.T) {
+		table := New(nil).MustTable(tableName, UpdateTable{})
+		update := table.Update("hello").
+			Range("world").
+			Set("#A = ?", "blah").
+			OldValues(&UpdateTable{})
+
+		input, err := update.UpdateItemInput()
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+
+		assertEqual(t, input, "testdata/update_old_values_ok.json")
+	})
+}
+
+func TestUpdate_BothValues(t *testing.T) {
+	const tableName = "example"
+
+	t.Run("ok", func(t *testing.T) {
+		table := New(nil).MustTable(tableName, UpdateTable{})
+		update := table.Update("hello").
+			Range("world").
+			Set("#A = ?", "blah").
+			NewValues(&UpdateTable{}).
+			OldValues(&UpdateTable{})
+
+		_, err := update.UpdateItemInput()
+		if err == nil {
+			t.Fatalf("got nil; want not nil")
+		}
+	})
+}
+
 func TestUpdate_Remove(t *testing.T) {
 	const tableName = "example"
 

@@ -48,7 +48,7 @@
   },
   "ReturnConsumedCapacity": "TOTAL",
   "ReturnItemCollectionMetrics": null,
-  "ReturnValues": null,
+  "ReturnValues": "NONE",
   "TableName": "example",
   "UpdateExpression": "Delete #n1 == :v1"
 }

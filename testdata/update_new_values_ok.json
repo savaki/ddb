@@ -13,10 +13,10 @@
       "BS": null,
       "L": null,
       "M": null,
-      "N": "123",
+      "N": null,
       "NS": null,
       "NULL": null,
-      "S": null,
+      "S": "blah",
       "SS": null
     }
   },
@@ -48,7 +48,7 @@
   },
   "ReturnConsumedCapacity": "TOTAL",
   "ReturnItemCollectionMetrics": null,
-  "ReturnValues": "NONE",
+  "ReturnValues": "ALL_NEW",
   "TableName": "example",
   "UpdateExpression": "Set #n1 = :v1"
 }

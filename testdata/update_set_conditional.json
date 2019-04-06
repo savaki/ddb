@@ -61,7 +61,7 @@
   },
   "ReturnConsumedCapacity": "TOTAL",
   "ReturnItemCollectionMetrics": null,
-  "ReturnValues": null,
+  "ReturnValues": "NONE",
   "TableName": "example",
   "UpdateExpression": "Set #n2 = :v2"
 }

@@ -2,9 +2,11 @@ package ddb
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 )
 
@@ -17,6 +19,8 @@ type Update struct {
 	consumed                            *ConsumedCapacity
 	err                                 error
 	expr                                *expression
+	newValues                           interface{}
+	oldValues                           interface{}
 	returnValuesOnConditionCheckFailure string
 }
 
@@ -26,14 +30,23 @@ func (u *Update) UpdateItemInput() (*dynamodb.UpdateItemInput, error) {
 		return nil, err
 	}
 
-	conditionExpression := u.expr.ConditionExpression()
-	updateExpression := u.expr.UpdateExpression()
+	returnValues, err := u.returnValues()
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		conditionExpression = u.expr.ConditionExpression()
+		updateExpression    = u.expr.UpdateExpression()
+	)
+
 	return &dynamodb.UpdateItemInput{
 		ConditionExpression:       conditionExpression,
 		ExpressionAttributeNames:  u.expr.Names,
 		ExpressionAttributeValues: u.expr.Values,
 		Key:                       key,
 		ReturnConsumedCapacity:    aws.String(dynamodb.ReturnConsumedCapacityTotal),
+		ReturnValues:              aws.String(returnValues),
 		TableName:                 aws.String(u.spec.TableName),
 		UpdateExpression:          updateExpression,
 	}, nil
@@ -86,6 +99,18 @@ func (u *Update) Delete(expr string, values ...interface{}) *Update {
 	return u
 }
 
+func (u *Update) NewValues(v interface{}) *Update {
+	u.newValues = v
+
+	return u
+}
+
+func (u *Update) OldValues(v interface{}) *Update {
+	u.oldValues = v
+
+	return u
+}
+
 func (u *Update) Range(rangeKey interface{}) *Update {
 	u.rangeKey = rangeKey
 	return u
@@ -127,12 +152,36 @@ func (u *Update) RunWithContext(ctx context.Context) error {
 		return err
 	}
 
+	if m := output.Attributes; m != nil {
+		if u.oldValues != nil {
+			if err := dynamodbattribute.UnmarshalMap(m, u.oldValues); err != nil {
+				return fmt.Errorf("update unable to unmarshal old values: %v", err)
+			}
+		} else if u.newValues != nil {
+			if err := dynamodbattribute.UnmarshalMap(m, u.newValues); err != nil {
+				return fmt.Errorf("update unable to unmarshal new values: %v", err)
+			}
+		}
+	}
+
 	u.consumed.add(output.ConsumedCapacity)
 	return nil
 }
 
 func (u *Update) Run() error {
 	return u.RunWithContext(defaultContext)
+}
+
+func (u *Update) returnValues() (string, error) {
+	if u.newValues == nil && u.oldValues == nil {
+		return dynamodb.ReturnValueNone, nil
+	} else if u.newValues != nil && u.oldValues != nil {
+		return "", fmt.Errorf("either NewValues or OldValues may be specified, but not both")
+	} else if u.newValues != nil {
+		return dynamodb.ReturnValueAllNew, nil
+	} else {
+		return dynamodb.ReturnValueAllOld, nil
+	}
 }
 
 func (t *Table) Update(hashKey interface{}) *Update {

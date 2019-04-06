@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 )
 
@@ -23,6 +24,7 @@ type Mock struct {
 	getItem    interface{}
 	queryItems []interface{}
 	scanItems  []interface{}
+	updateItem interface{}
 
 	deleteInput *dynamodb.DeleteItemInput
 	getInput    *dynamodb.GetItemInput
@@ -132,9 +134,19 @@ func (m *Mock) TransactWriteItemsWithContext(ctx aws.Context, input *dynamodb.Tr
 
 func (m *Mock) UpdateItemWithContext(ctx aws.Context, input *dynamodb.UpdateItemInput, opts ...request.Option) (*dynamodb.UpdateItemOutput, error) {
 	m.updateInput = input
-	return &dynamodb.UpdateItemOutput{
+
+	output := dynamodb.UpdateItemOutput{
 		ConsumedCapacity: &dynamodb.ConsumedCapacity{
 			WriteCapacityUnits: aws.Float64(1),
 		},
-	}, m.err
+	}
+	if m.updateItem != nil {
+		item, err := dynamodbattribute.MarshalMap(m.updateItem)
+		if err != nil {
+			return nil, err
+		}
+		output.Attributes = item
+	}
+
+	return &output, m.err
 }
