@@ -4,8 +4,7 @@
   "ConditionalOperator": null,
   "Expected": null,
   "ExpressionAttributeNames": {
-    "#n1": "a",
-    "#n2": "a"
+    "#n1": "a"
   },
   "ExpressionAttributeValues": {
     ":v1": {
@@ -63,5 +62,5 @@
   "ReturnItemCollectionMetrics": null,
   "ReturnValues": "NONE",
   "TableName": "example",
-  "UpdateExpression": "Set #n2 = :v2"
+  "UpdateExpression": "Set #n1 = :v2"
 }

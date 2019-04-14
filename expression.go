@@ -28,6 +28,13 @@ func (e *expression) addExpressionAttributeName(name string) string {
 		e.Names = map[string]*string{}
 	}
 
+	// use existing attribute name where possible
+	for k, v := range e.Names {
+		if *v == name {
+			return k
+		}
+	}
+
 	key := "#n" + strconv.Itoa(len(e.Names)+1)
 	for _, attr := range e.attributes {
 		switch name {

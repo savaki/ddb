@@ -1,10 +1,9 @@
 {
-  "ConditionExpression": "#n1 \u003e :v1 and #n2 \u003c :v2",
+  "ConditionExpression": "#n1 \u003e :v1 and #n1 \u003c :v2",
   "ConditionalOperator": null,
   "Expected": null,
   "ExpressionAttributeNames": {
-    "#n1": "Field",
-    "#n2": "Field"
+    "#n1": "Field"
   },
   "ExpressionAttributeValues": {
     ":v1": {
