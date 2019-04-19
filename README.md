@@ -1,4 +1,5 @@
 [![GoDoc](https://godoc.org/github.com/savaki/ddb?status.svg)](https://godoc.org/github.com/savaki/ddb)
+[![Go Report Card](https://goreportcard.com/badge/github.com/savaki/ddb)](https://goreportcard.com/report/github.com/savaki/ddb)
 [![Coverage Status](https://coveralls.io/repos/github/savaki/ddb/badge.svg)](https://coveralls.io/github/savaki/ddb)
 
 ddb
