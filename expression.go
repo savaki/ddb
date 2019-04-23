@@ -82,20 +82,23 @@ func (e *expression) UpdateExpression() *string {
 
 	buf := &strings.Builder{} //make([]byte, 0, size))
 	buf.Grow(size)
-	if e.Adds != nil {
-		buf.WriteString(e.Adds.String())
-		buf.WriteString(" ")
-	}
-	if e.Deletes != nil {
-		buf.WriteString(e.Deletes.String())
+
+	// ordering as defined here:
+	// https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.UpdateExpressions.html
+	if e.Sets != nil {
+		buf.WriteString(e.Sets.String())
 		buf.WriteString(" ")
 	}
 	if e.Removes != nil {
 		buf.WriteString(e.Removes.String())
 		buf.WriteString(" ")
 	}
-	if e.Sets != nil {
-		buf.WriteString(e.Sets.String())
+	if e.Adds != nil {
+		buf.WriteString(e.Adds.String())
+		buf.WriteString(" ")
+	}
+	if e.Deletes != nil {
+		buf.WriteString(e.Deletes.String())
 		buf.WriteString(" ")
 	}
 
