@@ -1,9 +1,19 @@
 package ddb
 
 import (
+	"context"
+	"fmt"
 	"io"
 	"reflect"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 )
 
 type ScanTable struct {
@@ -117,8 +127,80 @@ func TestScan_Each(t *testing.T) {
 	})
 }
 
+func TestScan_Condition(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		var (
+			mock  = &Mock{}
+			db    = New(mock)
+			table = db.MustTable("example", ScanTable{})
+		)
+
+		input := table.Scan().
+			Filter("#ID = ?", "abc").
+			makeScanInput(0, 1, nil)
+
+		assertEqual(t, input, "testdata/scan_condition.json")
+	})
+}
+
+func TestScan_ConditionLive(t *testing.T) {
+	//if !runIntegrationTests {
+	//	t.SkipNow()
+	//}
+
+	type Sample struct {
+		ID string `ddb:"hash"`
+	}
+
+	var (
+		ctx  = context.Background()
+		s, _ = session.NewSession(aws.NewConfig().
+			WithCredentials(credentials.NewStaticCredentials("blah", "blah", "")).
+			WithRegion("us-west-2").
+			WithEndpoint("http://localhost:8000"))
+		api       = dynamodb.New(s)
+		tableName = fmt.Sprintf("scan-%v", time.Now().UnixNano())
+		table     = New(api).MustTable(tableName, Sample{})
+	)
+
+	err := table.CreateTableIfNotExists(ctx)
+	if err != nil {
+		t.Fatalf("got %v; want nil", err)
+	}
+	defer table.DeleteTableIfExists(ctx)
+
+	err = table.Put(Sample{ID: "a"}).RunWithContext(ctx)
+	assert.Nil(t, err)
+
+	err = table.Put(Sample{ID: "b"}).RunWithContext(ctx)
+	assert.Nil(t, err)
+
+	err = table.Put(Sample{ID: "c"}).RunWithContext(ctx)
+	assert.Nil(t, err)
+
+	var samples []Sample
+	fn := func(item Item) (bool, error) {
+		var sample Sample
+		if err := item.Unmarshal(&sample); err != nil {
+			return false, err
+		}
+		samples = append(samples, sample)
+		return true, nil
+	}
+
+	err = table.Scan().
+		ConsistentRead(true).
+		Filter("#ID = ?", "c").
+		TotalSegments(3).
+		EachWithContext(ctx, fn)
+	assert.Nil(t, err)
+	assert.Len(t, samples, 1)
+	assert.Equal(t, Sample{ID: "c"}, samples[0])
+}
+
 func TestScan_ConsistentRead(t *testing.T) {
 	s := &Scan{
+		expr: &expression{},
 		spec: &tableSpec{TableName: "example"},
 	}
 	s.ConsistentRead(true)

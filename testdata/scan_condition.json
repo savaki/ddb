@@ -1,0 +1,33 @@
+{
+  "AttributesToGet": null,
+  "ConditionalOperator": null,
+  "ConsistentRead": false,
+  "ExclusiveStartKey": null,
+  "ExpressionAttributeNames": {
+    "#n1": "ID"
+  },
+  "ExpressionAttributeValues": {
+    ":v1": {
+      "B": null,
+      "BOOL": null,
+      "BS": null,
+      "L": null,
+      "M": null,
+      "N": null,
+      "NS": null,
+      "NULL": null,
+      "S": "abc",
+      "SS": null
+    }
+  },
+  "FilterExpression": "#n1 = :v1",
+  "IndexName": null,
+  "Limit": null,
+  "ProjectionExpression": null,
+  "ReturnConsumedCapacity": "TOTAL",
+  "ScanFilter": null,
+  "Segment": 0,
+  "Select": null,
+  "TableName": "example",
+  "TotalSegments": 0
+}

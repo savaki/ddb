@@ -10,7 +10,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 )
 
+// Item provides handle to each record that can be unmarshalled
 type Item interface {
+	// Unmarshal the record into the provided interface
 	Unmarshal(v interface{}) error
 }
 
@@ -22,27 +24,54 @@ func (b baseItem) Unmarshal(v interface{}) error {
 	return dynamodbattribute.UnmarshalMap(b.raw, v)
 }
 
+// Scan encapsulates a scan request
 type Scan struct {
 	api            dynamodbiface.DynamoDBAPI
 	spec           *tableSpec
 	consistentRead bool
-	totalSegments  int64
 	consumed       *ConsumedCapacity
+	err            error
+	expr           *expression
+	totalSegments  int64
 }
 
+// ConsistentRead enables or disables consistent reading
 func (s *Scan) ConsistentRead(enabled bool) *Scan {
 	s.consistentRead = true
 	return s
 }
 
+// Filter allows for the scan record to be conditionally filtered
+func (s *Scan) Filter(expr string, values ...interface{}) *Scan {
+	if err := s.expr.Condition(expr, values...); err != nil {
+		s.err = err
+	}
+
+	return s
+}
+
+// TotalSegments allows for the Scan operation to run in parallel.  If not set, defaults
+// to 1 segment
+func (s *Scan) TotalSegments(n int64) *Scan {
+	s.totalSegments = n
+	return s
+}
+
 func (s *Scan) makeScanInput(segment, totalSegments int64, startKey map[string]*dynamodb.AttributeValue) *dynamodb.ScanInput {
+	var (
+		filterExpr = s.expr.ConditionExpression()
+	)
+
 	return &dynamodb.ScanInput{
-		ConsistentRead:         aws.Bool(s.consistentRead),
-		ExclusiveStartKey:      startKey,
-		ReturnConsumedCapacity: aws.String(dynamodb.ReturnConsumedCapacityTotal),
-		Segment:                aws.Int64(segment),
-		TableName:              aws.String(s.spec.TableName),
-		TotalSegments:          aws.Int64(s.totalSegments),
+		ConsistentRead:            aws.Bool(s.consistentRead),
+		ExclusiveStartKey:         startKey,
+		ExpressionAttributeNames:  s.expr.Names,
+		ExpressionAttributeValues: s.expr.Values,
+		FilterExpression:          filterExpr,
+		ReturnConsumedCapacity:    aws.String(dynamodb.ReturnConsumedCapacityTotal),
+		Segment:                   aws.Int64(segment),
+		TableName:                 aws.String(s.spec.TableName),
+		TotalSegments:             aws.Int64(s.totalSegments),
 	}
 }
 
@@ -77,7 +106,15 @@ func (s *Scan) scanSegment(ctx context.Context, segment, totalSegments int64, fn
 	return false, nil
 }
 
-func (s *Scan) EachWithContext(ctx context.Context, fn func(item Item) (bool, error)) error {
+// EachWithContext iterates invokes the callback for each record that matches the scan.
+// So long as the callback returns `true, nil`, the scan will continue.  If the callback
+// either returns an error OR false, the scan will stop.  The scan will also stop if the
+// context has been canceled.
+func (s *Scan) EachWithContext(ctx context.Context, callback func(item Item) (bool, error)) error {
+	if s.err != nil {
+		return s.err
+	}
+
 	if s.totalSegments == 0 {
 		s.totalSegments = 1
 	}
@@ -92,7 +129,7 @@ func (s *Scan) EachWithContext(ctx context.Context, fn func(item Item) (bool, er
 		go func(segment int64) {
 			defer wg.Done()
 
-			stop, err := s.scanSegment(ctx, segment, s.totalSegments, fn)
+			stop, err := s.scanSegment(ctx, segment, s.totalSegments, callback)
 			if err != nil {
 				errs <- err
 			}
@@ -111,10 +148,13 @@ func (s *Scan) EachWithContext(ctx context.Context, fn func(item Item) (bool, er
 	return nil
 }
 
-func (s *Scan) Each(fn func(item Item) (bool, error)) error {
-	return s.EachWithContext(defaultContext, fn)
+// Each is identical to EachWithContext except that it does not allow for cancellation
+// via the context.
+func (s *Scan) Each(callback func(item Item) (bool, error)) error {
+	return s.EachWithContext(defaultContext, callback)
 }
 
+// FirstWithContext returns the first scanned record and allows for cancellation
 func (s *Scan) FirstWithContext(ctx context.Context, v interface{}) error {
 	mux := &sync.Mutex{}
 	count := 0
@@ -141,14 +181,17 @@ func (s *Scan) FirstWithContext(ctx context.Context, v interface{}) error {
 	return nil
 }
 
+// First returns the first scanned record
 func (s *Scan) First(v interface{}) error {
 	return s.FirstWithContext(defaultContext, v)
 }
 
+// Scan initiates the scan operation
 func (t *Table) Scan() *Scan {
 	return &Scan{
 		api:      t.ddb.api,
-		spec:     t.spec,
 		consumed: t.consumed,
+		expr:     &expression{},
+		spec:     t.spec,
 	}
 }
