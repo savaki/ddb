@@ -17,7 +17,7 @@ import (
 )
 
 type ScanTable struct {
-	ID string `ddb:"hash"`
+	ID string `dynamodbav:"id" ddb:"hash"`
 }
 
 func TestScan_First(t *testing.T) {
@@ -144,9 +144,9 @@ func TestScan_Condition(t *testing.T) {
 }
 
 func TestScan_ConditionLive(t *testing.T) {
-	//if !runIntegrationTests {
-	//	t.SkipNow()
-	//}
+	if !runIntegrationTests {
+		t.SkipNow()
+	}
 
 	type Sample struct {
 		ID string `ddb:"hash"`
@@ -190,12 +190,12 @@ func TestScan_ConditionLive(t *testing.T) {
 
 	err = table.Scan().
 		ConsistentRead(true).
-		Filter("#ID = ?", "c").
+		Filter("#ID = ?", "b").
 		TotalSegments(3).
 		EachWithContext(ctx, fn)
 	assert.Nil(t, err)
 	assert.Len(t, samples, 1)
-	assert.Equal(t, Sample{ID: "c"}, samples[0])
+	assert.Equal(t, Sample{ID: "b"}, samples[0])
 }
 
 func TestScan_ConsistentRead(t *testing.T) {

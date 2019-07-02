@@ -4,7 +4,7 @@
   "ConsistentRead": false,
   "ExclusiveStartKey": null,
   "ExpressionAttributeNames": {
-    "#n1": "ID"
+    "#n1": "id"
   },
   "ExpressionAttributeValues": {
     ":v1": {

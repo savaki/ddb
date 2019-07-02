@@ -205,7 +205,9 @@ func (t *Table) Scan() *Scan {
 	return &Scan{
 		api:      t.ddb.api,
 		consumed: t.consumed,
-		expr:     &expression{},
-		spec:     t.spec,
+		expr: &expression{
+			attributes: t.spec.Attributes,
+		},
+		spec: t.spec,
 	}
 }
