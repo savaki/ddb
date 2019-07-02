@@ -2,6 +2,8 @@ package ddb
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -30,6 +32,7 @@ type Scan struct {
 	spec           *tableSpec
 	consistentRead bool
 	consumed       *ConsumedCapacity
+	debug          io.Writer
 	err            error
 	expr           *expression
 	totalSegments  int64
@@ -38,6 +41,12 @@ type Scan struct {
 // ConsistentRead enables or disables consistent reading
 func (s *Scan) ConsistentRead(enabled bool) *Scan {
 	s.consistentRead = true
+	return s
+}
+
+// Debug dynamodb request
+func (s *Scan) Debug(w io.Writer) *Scan {
+	s.debug = w
 	return s
 }
 
@@ -117,6 +126,11 @@ func (s *Scan) EachWithContext(ctx context.Context, callback func(item Item) (bo
 
 	if s.totalSegments == 0 {
 		s.totalSegments = 1
+	}
+
+	if s.debug != nil {
+		input := s.makeScanInput(0, s.totalSegments, nil)
+		_ = json.NewEncoder(s.debug).Encode(input)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
