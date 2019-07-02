@@ -24,6 +24,10 @@ type causer interface {
 	Cause() error
 }
 
+type wrapper interface {
+	Unwrap() error
+}
+
 func hasError(err error, code string) bool {
 	if err == nil {
 		return false
@@ -33,8 +37,12 @@ func hasError(err error, code string) bool {
 		return true
 	}
 
-	if causer, ok := err.(causer); ok {
-		return hasError(causer.Cause(), code)
+	if item, ok := err.(causer); ok {
+		return hasError(item.Cause(), code)
+	}
+
+	if item, ok := err.(wrapper); ok {
+		return hasError(item.Unwrap(), code)
 	}
 
 	return false
@@ -76,6 +84,10 @@ func (b *baseError) Error() string {
 
 func (b *baseError) Message() string {
 	return b.message
+}
+
+func (b *baseError) Unwrap() error {
+	return b.cause
 }
 
 func errorf(code, message string, args ...interface{}) Error {
