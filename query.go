@@ -105,6 +105,23 @@ func (q *Query) Each(fn func(item Item) (bool, error)) error {
 	return q.EachWithContext(defaultContext, fn)
 }
 
+// FirstWithContext binds the first value and returns
+func (q *Query) FirstWithContext(ctx context.Context, v interface{}) error {
+	return q.EachWithContext(ctx, func(item Item) (bool, error) {
+		if err := item.Unmarshal(v); err != nil {
+			return false, err
+		}
+		return false, nil
+	})
+}
+
+// First binds the first value and returns
+func (q *Query) First(v interface{}) error {
+	return q.FirstWithContext(defaultContext, v)
+}
+
+// ScanIndexForward when true returns the values in reverse sort key order
+// https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html
 func (q *Query) ScanIndexForward(enabled bool) *Query {
 	q.scanIndexForward = enabled
 	return q

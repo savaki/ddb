@@ -83,3 +83,37 @@ func TestQuery(t *testing.T) {
 		}
 	})
 }
+
+func TestQuery_First(t *testing.T) {
+	t.Run("first returns first item", func(t *testing.T) {
+		var (
+			want  = QueryExample{ID: "abc", Date: "2019-03-10"}
+			blah  = QueryExample{ID: "blah", Date: "2019-03-11"}
+			mock  = &Mock{queryItems: []interface{}{want, blah, blah}}
+			table = New(mock).MustTable("example", QueryExample{})
+		)
+
+		var got QueryExample
+		err := table.Query(want.ID).First(&got)
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("got %v; want %v", got, want)
+		}
+	})
+
+	t.Run("fails", func(t *testing.T) {
+		var (
+			want  = QueryExample{ID: "abc", Date: "2019-03-10"}
+			blah  = QueryExample{ID: "blah", Date: "2019-03-11"}
+			mock  = &Mock{queryItems: []interface{}{want, blah, blah}}
+			table = New(mock).MustTable("example", QueryExample{})
+		)
+
+		err := table.Query(want.ID).First(nil)
+		if err == nil {
+			t.Fatalf("got nil; want not nil")
+		}
+	})
+}
