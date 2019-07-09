@@ -94,3 +94,38 @@ func TestParse(t *testing.T) {
 		}
 	})
 }
+
+func Test_expression_FilterExpression(t *testing.T) {
+	tests := []struct {
+		name   string
+		expr   string
+		values []interface{}
+		want   string
+	}{
+		{
+			name: "simple",
+			expr: "a > b",
+			want: "a > b",
+		},
+		{
+			name:   "single arg",
+			expr:   "a > ?",
+			values: []interface{}{1},
+			want:   "a > :v1",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			expr := &expression{}
+			err := expr.Filter(tt.expr, tt.values...)
+			if err != nil {
+				t.Fatalf("got %v; want nil", err)
+			}
+
+			got := expr.FilterExpression()
+			if *got != tt.want {
+				t.Fatalf("got %v; want %v", *got, tt.want)
+			}
+		})
+	}
+}

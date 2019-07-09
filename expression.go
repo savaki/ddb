@@ -19,6 +19,7 @@ type expression struct {
 	Adds       *strings.Builder
 	Conditions *strings.Builder
 	Deletes    *strings.Builder
+	Filters    *strings.Builder
 	Removes    *strings.Builder
 	Sets       *strings.Builder
 }
@@ -114,6 +115,14 @@ func (e *expression) ConditionExpression() *string {
 	return aws.String(e.Conditions.String())
 }
 
+func (e *expression) FilterExpression() *string {
+	if e.Filters == nil {
+		return nil
+	}
+
+	return aws.String(e.Filters.String())
+}
+
 func (e *expression) append(buf *strings.Builder, keyword, separator, expr string, values ...interface{}) error {
 	expr, err := e.parse(expr, values...)
 	if err != nil {
@@ -148,7 +157,7 @@ func (e *expression) Add(expr string, values ...interface{}) error {
 func (e *expression) Condition(expr string, values ...interface{}) error {
 	if e.Conditions == nil {
 		e.Conditions = &strings.Builder{}
-		e.Conditions.Grow(123)
+		e.Conditions.Grow(128)
 	}
 	return e.append(e.Conditions, "", " and ", expr, values...)
 }
@@ -159,6 +168,14 @@ func (e *expression) Delete(expr string, values ...interface{}) error {
 		e.Deletes.Grow(128)
 	}
 	return e.append(e.Deletes, "Delete", comma, expr, values...)
+}
+
+func (e *expression) Filter(expr string, values ...interface{}) error {
+	if e.Filters == nil {
+		e.Filters = &strings.Builder{}
+		e.Filters.Grow(128)
+	}
+	return e.append(e.Filters, "", " and ", expr, values...)
 }
 
 func (e *expression) Remove(expr string, values ...interface{}) error {

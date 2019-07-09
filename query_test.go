@@ -117,3 +117,37 @@ func TestQuery_First(t *testing.T) {
 		}
 	})
 }
+
+func TestQuery_Filter(t *testing.T) {
+	type Sample struct {
+		Hash  string `ddb:"hash"`
+		Range int    `ddb:"range"`
+		Value int
+	}
+
+	var (
+		mock  = &Mock{}
+		table = New(mock).MustTable("example", Sample{})
+	)
+
+	t.Run("ok", func(t *testing.T) {
+		query := table.Query("#Hash = ?", "abc").
+			Filter("#Value between ? and ?", 1, 3)
+
+		input, err := query.QueryInput()
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+		assertEqual(t, input, "testdata/query_filter.json")
+	})
+
+	t.Run("fails", func(t *testing.T) {
+		query := table.Query("#Hash = ?", "abc").
+			Filter("#Value between ?")
+
+		_, err := query.QueryInput()
+		if err == nil {
+			t.Fatalf("got nil; want not nil")
+		}
+	})
+}

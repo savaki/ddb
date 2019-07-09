@@ -20,18 +20,25 @@ type Query struct {
 	attributes       []string
 }
 
+// QueryInput returns the raw dynamodb QueryInput that will be submitted
 func (q *Query) QueryInput() (*dynamodb.QueryInput, error) {
+	if q.err != nil {
+		return nil, q.err
+	}
+
 	var indexName *string
 	if q.indexName != "" {
 		indexName = aws.String(q.indexName)
 	}
 
 	conditionExpression := q.expr.ConditionExpression()
+	filterExpression := q.expr.FilterExpression()
 	input := dynamodb.QueryInput{
 		ConsistentRead:            aws.Bool(q.consistentRead),
 		KeyConditionExpression:    conditionExpression,
 		ExpressionAttributeNames:  q.expr.Names,
 		ExpressionAttributeValues: q.expr.Values,
+		FilterExpression:          filterExpression,
 		IndexName:                 indexName,
 		ReturnConsumedCapacity:    aws.String(dynamodb.ReturnConsumedCapacityTotal),
 		ScanIndexForward:          aws.Bool(q.scanIndexForward),
@@ -103,6 +110,15 @@ func (q *Query) EachWithContext(ctx context.Context, fn func(item Item) (bool, e
 
 func (q *Query) Each(fn func(item Item) (bool, error)) error {
 	return q.EachWithContext(defaultContext, fn)
+}
+
+// Filter allows for the query to be conditionally filtered
+func (q *Query) Filter(expr string, values ...interface{}) *Query {
+	if err := q.expr.Filter(expr, values...); err != nil {
+		q.err = err
+	}
+
+	return q
 }
 
 // FirstWithContext binds the first value and returns
