@@ -236,9 +236,9 @@ func TestDeleteTable(t *testing.T) {
 }
 
 func TestTable_CreateTableIfNotExists_Live(t *testing.T) {
-	//if !runIntegrationTests {
-	//	t.SkipNow()
-	//}
+	if !runIntegrationTests {
+		t.SkipNow()
+	}
 
 	s := session.Must(session.NewSession(aws.NewConfig().
 		WithCredentials(credentials.NewStaticCredentials("blah", "blah", "")).
@@ -247,18 +247,75 @@ func TestTable_CreateTableIfNotExists_Live(t *testing.T) {
 	api := dynamodb.New(s)
 	ctx := context.Background()
 
+	t.Run("gsi - pay per request", func(t *testing.T) {
+		type GSI struct {
+			ID  string `ddb:"hash"`
+			GID string `ddb:"gsi_hash:global"`
+		}
+
+		tableName := fmt.Sprintf("gsi-payper-%v", time.Now().UnixNano())
+		table := New(api).MustTable(tableName, GSI{})
+
+		err := table.CreateTableIfNotExists(ctx, WithBillingMode(dynamodb.BillingModePayPerRequest))
+		assert.Nil(t, err)
+		defer table.DeleteTableIfExists(ctx)
+	})
+
 	t.Run("gsi - hash only", func(t *testing.T) {
 		type GSI struct {
 			ID  string `ddb:"hash"`
 			GID string `ddb:"gsi_hash:global"`
 		}
-		tableName := fmt.Sprintf("gsi-%v", time.Now().UnixNano())
+		tableName := fmt.Sprintf("gsi-h-%v", time.Now().UnixNano())
 		table := New(api).MustTable(tableName, GSI{})
 
 		err := table.CreateTableIfNotExists(ctx)
 		assert.Nil(t, err)
+		defer table.DeleteTableIfExists(ctx)
 
-		err = table.DeleteTableIfExists(ctx)
+		want := GSI{
+			ID:  "id",
+			GID: "gid",
+		}
+		err = table.Put(want).Run()
 		assert.Nil(t, err)
+
+		query := table.Query("#GID = ?", want.GID).
+			IndexName("global")
+
+		var got GSI
+		err = query.First(&got)
+		assert.Nil(t, err)
+		assert.Equal(t, got, want)
+	})
+
+	t.Run("gsi - hash and range", func(t *testing.T) {
+		type GSI struct {
+			ID    string `ddb:"hash"`
+			Hash  string `ddb:"gsi_hash:global"`
+			Range string `ddb:"gsi_range:global"`
+		}
+		tableName := fmt.Sprintf("gsi-hr-%v", time.Now().UnixNano())
+		table := New(api).MustTable(tableName, GSI{})
+
+		err := table.CreateTableIfNotExists(ctx)
+		assert.Nil(t, err)
+		defer table.DeleteTableIfExists(ctx)
+
+		want := GSI{
+			ID:    "id",
+			Hash:  "hash",
+			Range: "range",
+		}
+		err = table.Put(want).Run()
+		assert.Nil(t, err)
+
+		query := table.Query("#Hash = ? and #Range = ?", want.Hash, want.Range).
+			IndexName("global")
+
+		var got GSI
+		err = query.First(&got)
+		assert.Nil(t, err)
+		assert.Equal(t, got, want)
 	})
 }
