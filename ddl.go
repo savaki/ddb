@@ -231,6 +231,12 @@ func makeCreateTableInput(tableName string, spec *tableSpec, opts ...TableOption
 			IndexName: aws.String(item.IndexName),
 			KeySchema: makeKeySchemaElements(item.HashKey, item.RangeKey),
 		}
+		if options.billingMode == dynamodb.BillingModeProvisioned {
+			gsi.ProvisionedThroughput = &dynamodb.ProvisionedThroughput{
+				ReadCapacityUnits:  aws.Int64(options.readCapacityUnits),
+				WriteCapacityUnits: aws.Int64(options.writeCapacityUnits),
+			}
+		}
 		if len(item.Attributes) == 0 {
 			if item.KeysOnly {
 				gsi.Projection = &dynamodb.Projection{

@@ -143,12 +143,12 @@ func inspect(tableName string, model interface{}) (*tableSpec, error) {
 
 			case strings.HasPrefix(tag, tagGsiHash):
 				// gsi_hash:
-				indexName := firstOption(tag[len(tagLsiRange):])
+				indexName := firstOption(tag[len(tagGsiHash):])
 
 				gsi := spec.gsi(indexName)
 				gsi.IndexName = indexName
 				gsi.KeysOnly = hasTagOption(tag, optionKeysOnly)
-				gsi.RangeKey = &keySpec{
+				gsi.HashKey = &keySpec{
 					AttributeName: attr.AttributeName,
 					AttributeType: attr.AttributeType,
 				}

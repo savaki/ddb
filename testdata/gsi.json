@@ -24,22 +24,12 @@
   "BillingMode": "PROVISIONED",
   "GlobalSecondaryIndexes": [
     {
-      "IndexName": "ndex",
+      "IndexName": "index",
       "KeySchema": [
         {
           "AttributeName": "h",
-          "KeyType": "RANGE"
-        }
-      ],
-      "Projection": {
-        "NonKeyAttributes": null,
-        "ProjectionType": "ALL"
-      },
-      "ProvisionedThroughput": null
-    },
-    {
-      "IndexName": "index",
-      "KeySchema": [
+          "KeyType": "HASH"
+        },
         {
           "AttributeName": "r",
           "KeyType": "RANGE"
@@ -51,7 +41,10 @@
         ],
         "ProjectionType": "INCLUDE"
       },
-      "ProvisionedThroughput": null
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 3,
+        "WriteCapacityUnits": 3
+      }
     }
   ],
   "KeySchema": [

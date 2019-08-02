@@ -18,13 +18,19 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/tj/assert"
 )
 
 type Sample struct {
@@ -226,5 +232,33 @@ func TestDeleteTable(t *testing.T) {
 		if err == nil {
 			t.Fatalf("got %v; want not nil", err)
 		}
+	})
+}
+
+func TestTable_CreateTableIfNotExists_Live(t *testing.T) {
+	//if !runIntegrationTests {
+	//	t.SkipNow()
+	//}
+
+	s := session.Must(session.NewSession(aws.NewConfig().
+		WithCredentials(credentials.NewStaticCredentials("blah", "blah", "")).
+		WithEndpoint("http://localhost:8000").
+		WithRegion("us-west-2")))
+	api := dynamodb.New(s)
+	ctx := context.Background()
+
+	t.Run("gsi - hash only", func(t *testing.T) {
+		type GSI struct {
+			ID  string `ddb:"hash"`
+			GID string `ddb:"gsi_hash:global"`
+		}
+		tableName := fmt.Sprintf("gsi-%v", time.Now().UnixNano())
+		table := New(api).MustTable(tableName, GSI{})
+
+		err := table.CreateTableIfNotExists(ctx)
+		assert.Nil(t, err)
+
+		err = table.DeleteTableIfExists(ctx)
+		assert.Nil(t, err)
 	})
 }
