@@ -27,10 +27,25 @@ type Delete struct {
 	spec                                *tableSpec
 	hashKey                             interface{}
 	rangeKey                            interface{}
-	consumed                            *ConsumedCapacity
+	table                               *ConsumedCapacity
+	request                             *ConsumedCapacity
 	err                                 error
 	expr                                *expression
 	returnValuesOnConditionCheckFailure string
+}
+
+func (d *Delete) Condition(expr string, values ...interface{}) *Delete {
+	if err := d.expr.Condition(expr, values...); err != nil {
+		d.err = err
+	}
+
+	return d
+}
+
+// ConsumedCapacity captures consumed capacity to the property provided
+func (d *Delete) ConsumedCapacity(capture *ConsumedCapacity) *Delete {
+	d.request = capture
+	return d
 }
 
 func (d *Delete) DeleteItemInput() (*dynamodb.DeleteItemInput, error) {
@@ -48,36 +63,6 @@ func (d *Delete) DeleteItemInput() (*dynamodb.DeleteItemInput, error) {
 		ReturnConsumedCapacity:    aws.String(dynamodb.ReturnConsumedCapacityTotal),
 		TableName:                 aws.String(d.spec.TableName),
 	}, nil
-}
-
-func (d *Delete) Tx() (*dynamodb.TransactWriteItem, error) {
-	input, err := d.DeleteItemInput()
-	if err != nil {
-		return nil, err
-	}
-
-	writeItem := dynamodb.TransactWriteItem{
-		Delete: &dynamodb.Delete{
-			ConditionExpression:       input.ConditionExpression,
-			ExpressionAttributeNames:  input.ExpressionAttributeNames,
-			ExpressionAttributeValues: input.ExpressionAttributeValues,
-			Key:                       input.Key,
-			TableName:                 input.TableName,
-		},
-	}
-	if v := d.returnValuesOnConditionCheckFailure; v != "" {
-		writeItem.Delete.ReturnValuesOnConditionCheckFailure = aws.String(v)
-	}
-
-	return &writeItem, nil
-}
-
-func (d *Delete) Condition(expr string, values ...interface{}) *Delete {
-	if err := d.expr.Condition(expr, values...); err != nil {
-		d.err = err
-	}
-
-	return d
 }
 
 // Use ReturnValuesOnConditionCheckFailure to get the item attributes if the
@@ -106,7 +91,10 @@ func (d *Delete) RunWithContext(ctx context.Context) error {
 		return err
 	}
 
-	d.consumed.add(output.ConsumedCapacity)
+	d.table.add(output.ConsumedCapacity)
+	if d.request != nil {
+		d.request.add(output.ConsumedCapacity)
+	}
 
 	return nil
 }
@@ -115,12 +103,34 @@ func (d *Delete) Run() error {
 	return d.RunWithContext(defaultContext)
 }
 
+func (d *Delete) Tx() (*dynamodb.TransactWriteItem, error) {
+	input, err := d.DeleteItemInput()
+	if err != nil {
+		return nil, err
+	}
+
+	writeItem := dynamodb.TransactWriteItem{
+		Delete: &dynamodb.Delete{
+			ConditionExpression:       input.ConditionExpression,
+			ExpressionAttributeNames:  input.ExpressionAttributeNames,
+			ExpressionAttributeValues: input.ExpressionAttributeValues,
+			Key:                       input.Key,
+			TableName:                 input.TableName,
+		},
+	}
+	if v := d.returnValuesOnConditionCheckFailure; v != "" {
+		writeItem.Delete.ReturnValuesOnConditionCheckFailure = aws.String(v)
+	}
+
+	return &writeItem, nil
+}
+
 func (t *Table) Delete(hashKey interface{}) *Delete {
 	return &Delete{
-		api:      t.ddb.api,
-		spec:     t.spec,
-		hashKey:  hashKey,
-		consumed: t.consumed,
+		api:     t.ddb.api,
+		spec:    t.spec,
+		hashKey: hashKey,
+		table:   t.consumed,
 		expr: &expression{
 			attributes: t.spec.Attributes,
 		},

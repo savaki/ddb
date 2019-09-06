@@ -15,7 +15,19 @@ type Get struct {
 	hashKey        interface{}
 	rangeKey       interface{}
 	consistentRead bool
-	consumed       *ConsumedCapacity
+	table          *ConsumedCapacity
+	request        *ConsumedCapacity
+}
+
+func (g *Get) ConsistentRead(enabled bool) *Get {
+	g.consistentRead = true
+	return g
+}
+
+// ConsumedCapacity captures consumed capacity to the property provided
+func (g *Get) ConsumedCapacity(capture *ConsumedCapacity) *Get {
+	g.request = capture
+	return g
 }
 
 func (g *Get) GetItemInput() (*dynamodb.GetItemInput, error) {
@@ -37,11 +49,6 @@ func (g *Get) Range(value interface{}) *Get {
 	return g
 }
 
-func (g *Get) ConsistentRead(enabled bool) *Get {
-	g.consistentRead = true
-	return g
-}
-
 func (g *Get) ScanWithContext(ctx context.Context, v interface{}) error {
 	input, err := g.GetItemInput()
 	if err != nil {
@@ -53,7 +60,11 @@ func (g *Get) ScanWithContext(ctx context.Context, v interface{}) error {
 		return err
 	}
 
-	g.consumed.add(output.ConsumedCapacity)
+	g.table.add(output.ConsumedCapacity)
+	if g.request != nil {
+		g.request.add(output.ConsumedCapacity)
+	}
+
 	if len(output.Item) == 0 {
 		return errorf(ErrItemNotFound, "item not found")
 	}
@@ -71,9 +82,9 @@ func (g *Get) Scan(v interface{}) error {
 
 func (t *Table) Get(hashKey interface{}) *Get {
 	return &Get{
-		api:      t.ddb.api,
-		spec:     t.spec,
-		hashKey:  hashKey,
-		consumed: t.consumed,
+		api:     t.ddb.api,
+		spec:    t.spec,
+		hashKey: hashKey,
+		table:   t.consumed,
 	}
 }

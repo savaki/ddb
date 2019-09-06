@@ -16,7 +16,8 @@ type Update struct {
 	hashKey                             interface{}
 	rangeKey                            interface{}
 	consistentRead                      bool
-	consumed                            *ConsumedCapacity
+	request                             *ConsumedCapacity
+	table                               *ConsumedCapacity
 	err                                 error
 	expr                                *expression
 	newValues                           interface{}
@@ -24,32 +25,45 @@ type Update struct {
 	returnValuesOnConditionCheckFailure string
 }
 
-func (u *Update) UpdateItemInput() (*dynamodb.UpdateItemInput, error) {
-	key, err := makeKey(u.spec, u.hashKey, u.rangeKey)
-	if err != nil {
-		return nil, err
+func (u *Update) returnValues() (string, error) {
+	if u.newValues == nil && u.oldValues == nil {
+		return dynamodb.ReturnValueNone, nil
+	} else if u.newValues != nil && u.oldValues != nil {
+		return "", fmt.Errorf("either NewValues or OldValues may be specified, but not both")
+	} else if u.newValues != nil {
+		return dynamodb.ReturnValueAllNew, nil
+	} else {
+		return dynamodb.ReturnValueAllOld, nil
+	}
+}
+
+func (u *Update) Add(expr string, values ...interface{}) *Update {
+	if err := u.expr.Add(expr, values...); err != nil {
+		u.err = err
 	}
 
-	returnValues, err := u.returnValues()
-	if err != nil {
-		return nil, err
+	return u
+}
+
+func (u *Update) Condition(expr string, values ...interface{}) *Update {
+	if err := u.expr.Condition(expr, values...); err != nil {
+		u.err = err
 	}
 
-	var (
-		conditionExpression = u.expr.ConditionExpression()
-		updateExpression    = u.expr.UpdateExpression()
-	)
+	return u
+}
 
-	return &dynamodb.UpdateItemInput{
-		ConditionExpression:       conditionExpression,
-		ExpressionAttributeNames:  u.expr.Names,
-		ExpressionAttributeValues: u.expr.Values,
-		Key:                       key,
-		ReturnConsumedCapacity:    aws.String(dynamodb.ReturnConsumedCapacityTotal),
-		ReturnValues:              aws.String(returnValues),
-		TableName:                 aws.String(u.spec.TableName),
-		UpdateExpression:          updateExpression,
-	}, nil
+func (u *Update) ConsumedCapacity(capture *ConsumedCapacity) *Update {
+	u.request = capture
+	return u
+}
+
+func (u *Update) Delete(expr string, values ...interface{}) *Update {
+	if err := u.expr.Delete(expr, values...); err != nil {
+		u.err = err
+	}
+
+	return u
 }
 
 func (u *Update) Tx() (*dynamodb.TransactWriteItem, error) {
@@ -73,30 +87,6 @@ func (u *Update) Tx() (*dynamodb.TransactWriteItem, error) {
 	}
 
 	return &writeItem, nil
-}
-
-func (u *Update) Add(expr string, values ...interface{}) *Update {
-	if err := u.expr.Add(expr, values...); err != nil {
-		u.err = err
-	}
-
-	return u
-}
-
-func (u *Update) Condition(expr string, values ...interface{}) *Update {
-	if err := u.expr.Condition(expr, values...); err != nil {
-		u.err = err
-	}
-
-	return u
-}
-
-func (u *Update) Delete(expr string, values ...interface{}) *Update {
-	if err := u.expr.Delete(expr, values...); err != nil {
-		u.err = err
-	}
-
-	return u
 }
 
 func (u *Update) NewValues(v interface{}) *Update {
@@ -129,14 +119,6 @@ func (u *Update) ReturnValuesOnConditionCheckFailure(value string) *Update {
 	return u
 }
 
-func (u *Update) Set(expr string, values ...interface{}) *Update {
-	if err := u.expr.Set(expr, values...); err != nil {
-		u.err = err
-	}
-
-	return u
-}
-
 func (u *Update) RunWithContext(ctx context.Context) error {
 	if u.err != nil {
 		return u.err
@@ -164,7 +146,11 @@ func (u *Update) RunWithContext(ctx context.Context) error {
 		}
 	}
 
-	u.consumed.add(output.ConsumedCapacity)
+	u.table.add(output.ConsumedCapacity)
+	if u.request != nil {
+		u.request.add(output.ConsumedCapacity)
+	}
+
 	return nil
 }
 
@@ -172,24 +158,48 @@ func (u *Update) Run() error {
 	return u.RunWithContext(defaultContext)
 }
 
-func (u *Update) returnValues() (string, error) {
-	if u.newValues == nil && u.oldValues == nil {
-		return dynamodb.ReturnValueNone, nil
-	} else if u.newValues != nil && u.oldValues != nil {
-		return "", fmt.Errorf("either NewValues or OldValues may be specified, but not both")
-	} else if u.newValues != nil {
-		return dynamodb.ReturnValueAllNew, nil
-	} else {
-		return dynamodb.ReturnValueAllOld, nil
+func (u *Update) Set(expr string, values ...interface{}) *Update {
+	if err := u.expr.Set(expr, values...); err != nil {
+		u.err = err
 	}
+
+	return u
+}
+
+func (u *Update) UpdateItemInput() (*dynamodb.UpdateItemInput, error) {
+	key, err := makeKey(u.spec, u.hashKey, u.rangeKey)
+	if err != nil {
+		return nil, err
+	}
+
+	returnValues, err := u.returnValues()
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		conditionExpression = u.expr.ConditionExpression()
+		updateExpression    = u.expr.UpdateExpression()
+	)
+
+	return &dynamodb.UpdateItemInput{
+		ConditionExpression:       conditionExpression,
+		ExpressionAttributeNames:  u.expr.Names,
+		ExpressionAttributeValues: u.expr.Values,
+		Key:                       key,
+		ReturnConsumedCapacity:    aws.String(dynamodb.ReturnConsumedCapacityTotal),
+		ReturnValues:              aws.String(returnValues),
+		TableName:                 aws.String(u.spec.TableName),
+		UpdateExpression:          updateExpression,
+	}, nil
 }
 
 func (t *Table) Update(hashKey interface{}) *Update {
 	return &Update{
-		api:      t.ddb.api,
-		spec:     t.spec,
-		hashKey:  hashKey,
-		consumed: t.consumed,
+		api:     t.ddb.api,
+		spec:    t.spec,
+		hashKey: hashKey,
+		table:   t.consumed,
 		expr: &expression{
 			attributes: t.spec.Attributes,
 		},

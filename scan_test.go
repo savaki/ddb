@@ -213,3 +213,31 @@ func TestScan_ConsistentRead(t *testing.T) {
 		t.Fatalf("got false; want true")
 	}
 }
+
+func TestScan_ConsumedCapacity(t *testing.T) {
+	type Sample struct {
+		ID string `ddb:"hash"`
+	}
+
+	var (
+		mock = &Mock{
+			readUnits:  1,
+			writeUnits: 2,
+		}
+		table    = New(mock).MustTable("blah", Sample{})
+		callback = func(item Item) (bool, error) { return true, nil }
+		consumed ConsumedCapacity
+	)
+
+	err := table.Scan().ConsumedCapacity(&consumed).Each(callback)
+	if err != nil {
+		t.Fatalf("got %v; want nil", err)
+	}
+
+	if got, want := consumed.ReadUnits, mock.readUnits; got != want {
+		t.Fatalf("got %v; want %v", got, want)
+	}
+	if got, want := consumed.WriteUnits, mock.writeUnits; got != want {
+		t.Fatalf("got %v; want %v", got, want)
+	}
+}

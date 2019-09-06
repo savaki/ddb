@@ -38,22 +38,22 @@ type ConsumedCapacity struct {
 	WriteUnits int64
 }
 
-func (c *ConsumedCapacity) safeClone() ConsumedCapacity {
-	return ConsumedCapacity{
-		ReadUnits:  atomic.LoadInt64(&c.ReadUnits),
-		WriteUnits: atomic.LoadInt64(&c.WriteUnits),
-	}
-}
-
 func (c *ConsumedCapacity) add(in *dynamodb.ConsumedCapacity) {
 	if in == nil {
 		return
 	}
-	if rcu := in.ReadCapacityUnits; rcu != nil && *rcu > 0 {
-		atomic.AddInt64(&c.ReadUnits, int64(*rcu))
+	if units := in.ReadCapacityUnits; units != nil && *units > 0 {
+		atomic.AddInt64(&c.ReadUnits, int64(*units))
 	}
-	if wcu := in.WriteCapacityUnits; wcu != nil && *wcu > 0 {
-		atomic.AddInt64(&c.WriteUnits, int64(*wcu))
+	if units := in.WriteCapacityUnits; units != nil && *units > 0 {
+		atomic.AddInt64(&c.WriteUnits, int64(*units))
+	}
+}
+
+func (c *ConsumedCapacity) safeClone() ConsumedCapacity {
+	return ConsumedCapacity{
+		ReadUnits:  atomic.LoadInt64(&c.ReadUnits),
+		WriteUnits: atomic.LoadInt64(&c.WriteUnits),
 	}
 }
 

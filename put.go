@@ -12,10 +12,25 @@ type Put struct {
 	api                                 dynamodbiface.DynamoDBAPI
 	spec                                *tableSpec
 	value                               interface{}
-	consumed                            *ConsumedCapacity
+	request                             *ConsumedCapacity
+	table                               *ConsumedCapacity
 	err                                 error
 	expr                                *expression
 	returnValuesOnConditionCheckFailure string
+}
+
+func (p *Put) Condition(expr string, values ...interface{}) *Put {
+	if err := p.expr.Condition(expr, values...); err != nil {
+		p.err = err
+	}
+
+	return p
+}
+
+// ConsumedCapacity captures consumed capacity to the property provided
+func (p *Put) ConsumedCapacity(capture *ConsumedCapacity) *Put {
+	p.request = capture
+	return p
 }
 
 func (p *Put) PutItemInput() (*dynamodb.PutItemInput, error) {
@@ -31,6 +46,34 @@ func (p *Put) PutItemInput() (*dynamodb.PutItemInput, error) {
 		ExpressionAttributeValues: p.expr.Values,
 		TableName:                 aws.String(p.spec.TableName),
 	}, nil
+}
+
+func (p *Put) ReturnValuesOnConditionCheckFailure(value string) *Put {
+	p.returnValuesOnConditionCheckFailure = value
+	return p
+}
+
+func (p *Put) RunWithContext(ctx context.Context) error {
+	input, err := p.PutItemInput()
+	if err != nil {
+		return err
+	}
+
+	output, err := p.api.PutItemWithContext(ctx, input)
+	if err != nil {
+		return err
+	}
+
+	p.table.add(output.ConsumedCapacity)
+	if p.request != nil {
+		p.request.add(output.ConsumedCapacity)
+	}
+
+	return nil
+}
+
+func (p *Put) Run() error {
+	return p.RunWithContext(defaultContext)
 }
 
 func (p *Put) Tx() (*dynamodb.TransactWriteItem, error) {
@@ -55,45 +98,12 @@ func (p *Put) Tx() (*dynamodb.TransactWriteItem, error) {
 	return &writeItem, nil
 }
 
-func (p *Put) Condition(expr string, values ...interface{}) *Put {
-	if err := p.expr.Condition(expr, values...); err != nil {
-		p.err = err
-	}
-
-	return p
-}
-
-func (p *Put) ReturnValuesOnConditionCheckFailure(value string) *Put {
-	p.returnValuesOnConditionCheckFailure = value
-	return p
-}
-
-func (p *Put) RunWithContext(ctx context.Context) error {
-	input, err := p.PutItemInput()
-	if err != nil {
-		return err
-	}
-
-	output, err := p.api.PutItemWithContext(ctx, input)
-	if err != nil {
-		return err
-	}
-
-	p.consumed.add(output.ConsumedCapacity)
-
-	return nil
-}
-
-func (p *Put) Run() error {
-	return p.RunWithContext(defaultContext)
-}
-
 func (t *Table) Put(v interface{}) *Put {
 	return &Put{
-		api:      t.ddb.api,
-		spec:     t.spec,
-		value:    v,
-		consumed: t.consumed,
+		api:   t.ddb.api,
+		spec:  t.spec,
+		value: v,
+		table: t.consumed,
 		expr: &expression{
 			attributes: t.spec.Attributes,
 		},

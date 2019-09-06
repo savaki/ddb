@@ -31,39 +31,12 @@ type Scan struct {
 	api            dynamodbiface.DynamoDBAPI
 	spec           *tableSpec
 	consistentRead bool
-	consumed       *ConsumedCapacity
+	request        *ConsumedCapacity
+	table          *ConsumedCapacity
 	debug          io.Writer
 	err            error
 	expr           *expression
 	totalSegments  int64
-}
-
-// ConsistentRead enables or disables consistent reading
-func (s *Scan) ConsistentRead(enabled bool) *Scan {
-	s.consistentRead = true
-	return s
-}
-
-// Debug dynamodb request
-func (s *Scan) Debug(w io.Writer) *Scan {
-	s.debug = w
-	return s
-}
-
-// Filter allows for the scan record to be conditionally filtered
-func (s *Scan) Filter(expr string, values ...interface{}) *Scan {
-	if err := s.expr.Condition(expr, values...); err != nil {
-		s.err = err
-	}
-
-	return s
-}
-
-// TotalSegments allows for the Scan operation to run in parallel.  If not set, defaults
-// to 1 segment
-func (s *Scan) TotalSegments(n int64) *Scan {
-	s.totalSegments = n
-	return s
 }
 
 func (s *Scan) makeScanInput(segment, totalSegments int64, startKey map[string]*dynamodb.AttributeValue) *dynamodb.ScanInput {
@@ -94,6 +67,11 @@ func (s *Scan) scanSegment(ctx context.Context, segment, totalSegments int64, fn
 			return false, err
 		}
 
+		s.table.add(output.ConsumedCapacity)
+		if s.request != nil {
+			s.request.add(output.ConsumedCapacity)
+		}
+
 		var item baseItem
 		for _, rawItem := range output.Items {
 			item.raw = rawItem
@@ -113,6 +91,30 @@ func (s *Scan) scanSegment(ctx context.Context, segment, totalSegments int64, fn
 	}
 
 	return false, nil
+}
+
+// ConsistentRead enables or disables consistent reading
+func (s *Scan) ConsistentRead(enabled bool) *Scan {
+	s.consistentRead = true
+	return s
+}
+
+// ConsumedCapacity captures consumed capacity to the property provided
+func (s *Scan) ConsumedCapacity(capture *ConsumedCapacity) *Scan {
+	s.request = capture
+	return s
+}
+
+// Debug dynamodb request
+func (s *Scan) Debug(w io.Writer) *Scan {
+	s.debug = w
+	return s
+}
+
+// Each is identical to EachWithContext except that it does not allow for cancellation
+// via the context.
+func (s *Scan) Each(callback func(item Item) (bool, error)) error {
+	return s.EachWithContext(defaultContext, callback)
 }
 
 // EachWithContext iterates invokes the callback for each record that matches the scan.
@@ -162,10 +164,18 @@ func (s *Scan) EachWithContext(ctx context.Context, callback func(item Item) (bo
 	return nil
 }
 
-// Each is identical to EachWithContext except that it does not allow for cancellation
-// via the context.
-func (s *Scan) Each(callback func(item Item) (bool, error)) error {
-	return s.EachWithContext(defaultContext, callback)
+// Filter allows for the scan record to be conditionally filtered
+func (s *Scan) Filter(expr string, values ...interface{}) *Scan {
+	if err := s.expr.Condition(expr, values...); err != nil {
+		s.err = err
+	}
+
+	return s
+}
+
+// First returns the first scanned record
+func (s *Scan) First(v interface{}) error {
+	return s.FirstWithContext(defaultContext, v)
 }
 
 // FirstWithContext returns the first scanned record and allows for cancellation
@@ -195,16 +205,18 @@ func (s *Scan) FirstWithContext(ctx context.Context, v interface{}) error {
 	return nil
 }
 
-// First returns the first scanned record
-func (s *Scan) First(v interface{}) error {
-	return s.FirstWithContext(defaultContext, v)
+// TotalSegments allows for the Scan operation to run in parallel.  If not set, defaults
+// to 1 segment
+func (s *Scan) TotalSegments(n int64) *Scan {
+	s.totalSegments = n
+	return s
 }
 
 // Scan initiates the scan operation
 func (t *Table) Scan() *Scan {
 	return &Scan{
-		api:      t.ddb.api,
-		consumed: t.consumed,
+		api:   t.ddb.api,
+		table: t.consumed,
 		expr: &expression{
 			attributes: t.spec.Attributes,
 		},

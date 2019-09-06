@@ -54,3 +54,23 @@ func TestIsMismatchedValueCount(t *testing.T) {
 		t.Fatalf("got %v; want MismatchedValueCount", err)
 	}
 }
+
+func TestUnwrap(t *testing.T) {
+	want := io.EOF
+	err := baseError{
+		cause: want,
+	}
+	got := err.Unwrap()
+	if got != want {
+		t.Fatalf("got %v; want %v", got, want)
+	}
+}
+
+func TestIsInvalidFieldNameError(t *testing.T) {
+	got := IsInvalidFieldNameError(&baseError{
+		code: ErrInvalidFieldName,
+	})
+	if got != true {
+		t.Fatalf("got false; want true")
+	}
+}

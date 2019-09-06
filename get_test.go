@@ -21,9 +21,14 @@ type GetExample struct {
 func TestGet_One(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		var (
-			want  = GetExample{ID: "abc"}
-			mock  = &Mock{getItem: want}
-			table = New(mock).MustTable("example", GetExample{})
+			want = GetExample{ID: "abc"}
+			mock = &Mock{
+				getItem:    want,
+				readUnits:  1,
+				writeUnits: 2,
+			}
+			table    = New(mock).MustTable("example", GetExample{})
+			capacity ConsumedCapacity
 		)
 
 		err := table.Put(want).Run()
@@ -32,7 +37,7 @@ func TestGet_One(t *testing.T) {
 		}
 
 		var got GetExample
-		err = table.Get("abc").Scan(&got)
+		err = table.Get("abc").ConsumedCapacity(&capacity).Scan(&got)
 		if err != nil {
 			t.Fatalf("got %v; want nil", err)
 		}
@@ -40,11 +45,18 @@ func TestGet_One(t *testing.T) {
 			t.Fatalf("got %#v; want %#v", got, want)
 		}
 
-		consumed := table.ConsumedCapacity()
-		if got, want := consumed.ReadUnits, int64(1); got != want {
+		if got, want := capacity.ReadUnits, mock.readUnits; got != want {
 			t.Fatalf("got %v; want %v", got, want)
 		}
-		if got, want := consumed.WriteUnits, int64(1); got != want {
+		if got, want := capacity.WriteUnits, mock.writeUnits; got != want {
+			t.Fatalf("got %v; want %v", got, want)
+		}
+
+		consumed := table.ConsumedCapacity()
+		if got, want := consumed.ReadUnits, mock.readUnits*2; got != want {
+			t.Fatalf("got %v; want %v", got, want)
+		}
+		if got, want := consumed.WriteUnits, mock.writeUnits*2; got != want {
 			t.Fatalf("got %v; want %v", got, want)
 		}
 	})

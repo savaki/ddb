@@ -84,3 +84,27 @@ func TestDelete_Condition(t *testing.T) {
 		}
 	})
 }
+
+func TestDelete_ConsumedCapacity(t *testing.T) {
+	var (
+		mock = &Mock{
+			readUnits:  2,
+			writeUnits: 3,
+		}
+		db       = New(mock)
+		table    = db.MustTable("example", DeleteTable{})
+		capacity ConsumedCapacity
+	)
+
+	del := table.Delete("blah").ConsumedCapacity(&capacity)
+	err := del.Run()
+	if err != nil {
+		t.Fatalf("got %v; want nil", err)
+	}
+	if got, want := capacity.ReadUnits, mock.readUnits; got != want {
+		t.Fatalf("got %v; want %v", got, want)
+	}
+	if got, want := capacity.WriteUnits, mock.writeUnits; got != want {
+		t.Fatalf("got %v; want %v", got, want)
+	}
+}

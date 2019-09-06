@@ -13,11 +13,18 @@ type Query struct {
 	spec             *tableSpec
 	consistentRead   bool
 	scanIndexForward bool
-	consumed         *ConsumedCapacity
+	request          *ConsumedCapacity
+	table            *ConsumedCapacity
 	err              error
 	expr             *expression
 	indexName        string
 	attributes       []string
+}
+
+// ConsumedCapacity captures consumed capacity to the property provided
+func (q *Query) ConsumedCapacity(capture *ConsumedCapacity) *Query {
+	q.request = capture
+	return q
 }
 
 // QueryInput returns the raw dynamodb QueryInput that will be submitted
@@ -97,7 +104,10 @@ func (q *Query) EachWithContext(ctx context.Context, fn func(item Item) (bool, e
 			}
 		}
 
-		q.consumed.add(output.ConsumedCapacity)
+		q.table.add(output.ConsumedCapacity)
+		if q.request != nil {
+			q.request.add(output.ConsumedCapacity)
+		}
 
 		startKey = output.LastEvaluatedKey
 		if startKey == nil {
@@ -145,9 +155,9 @@ func (q *Query) ScanIndexForward(enabled bool) *Query {
 
 func (t *Table) Query(expr string, values ...interface{}) *Query {
 	query := &Query{
-		api:      t.ddb.api,
-		spec:     t.spec,
-		consumed: t.consumed,
+		api:   t.ddb.api,
+		spec:  t.spec,
+		table: t.consumed,
 		expr: &expression{
 			attributes: t.spec.Attributes,
 		},

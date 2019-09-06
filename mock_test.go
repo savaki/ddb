@@ -25,6 +25,8 @@ type Mock struct {
 	queryItems []interface{}
 	scanItems  []interface{}
 	updateItem interface{}
+	readUnits  int64 // readUnits capacity to return
+	writeUnits int64 // writeUnits capacity to return
 
 	deleteInput *dynamodb.DeleteItemInput
 	getInput    *dynamodb.GetItemInput
@@ -44,7 +46,8 @@ func (m *Mock) DeleteItemWithContext(ctx aws.Context, input *dynamodb.DeleteItem
 
 	return &dynamodb.DeleteItemOutput{
 		ConsumedCapacity: &dynamodb.ConsumedCapacity{
-			ReadCapacityUnits: aws.Float64(1),
+			ReadCapacityUnits:  aws.Float64(float64(m.readUnits)),
+			WriteCapacityUnits: aws.Float64(float64(m.writeUnits)),
 		},
 	}, m.err
 }
@@ -68,7 +71,8 @@ func (m *Mock) GetItemWithContext(ctx aws.Context, input *dynamodb.GetItemInput,
 	return &dynamodb.GetItemOutput{
 		Item: item,
 		ConsumedCapacity: &dynamodb.ConsumedCapacity{
-			ReadCapacityUnits: aws.Float64(1),
+			ReadCapacityUnits:  aws.Float64(float64(m.readUnits)),
+			WriteCapacityUnits: aws.Float64(float64(m.writeUnits)),
 		},
 	}, m.err
 }
@@ -77,7 +81,8 @@ func (m *Mock) PutItemWithContext(ctx aws.Context, input *dynamodb.PutItemInput,
 	m.putInput = input
 	return &dynamodb.PutItemOutput{
 		ConsumedCapacity: &dynamodb.ConsumedCapacity{
-			WriteCapacityUnits: aws.Float64(1),
+			ReadCapacityUnits:  aws.Float64(float64(m.readUnits)),
+			WriteCapacityUnits: aws.Float64(float64(m.writeUnits)),
 		},
 	}, m.err
 }
@@ -86,7 +91,8 @@ func (m *Mock) QueryWithContext(ctx aws.Context, input *dynamodb.QueryInput, opt
 	m.queryInput = input
 	output := dynamodb.QueryOutput{
 		ConsumedCapacity: &dynamodb.ConsumedCapacity{
-			WriteCapacityUnits: aws.Float64(1),
+			ReadCapacityUnits:  aws.Float64(float64(m.readUnits)),
+			WriteCapacityUnits: aws.Float64(float64(m.writeUnits)),
 		},
 	}
 
@@ -124,6 +130,11 @@ func (m *Mock) ScanWithContext(ctx aws.Context, input *dynamodb.ScanInput, opts 
 		m.scanItems = m.scanItems[1:]
 	}
 
+	output.ConsumedCapacity = &dynamodb.ConsumedCapacity{
+		ReadCapacityUnits:  aws.Float64(float64(m.readUnits)),
+		WriteCapacityUnits: aws.Float64(float64(m.writeUnits)),
+	}
+
 	return &output, m.err
 }
 
@@ -137,7 +148,8 @@ func (m *Mock) UpdateItemWithContext(ctx aws.Context, input *dynamodb.UpdateItem
 
 	output := dynamodb.UpdateItemOutput{
 		ConsumedCapacity: &dynamodb.ConsumedCapacity{
-			WriteCapacityUnits: aws.Float64(1),
+			ReadCapacityUnits:  aws.Float64(float64(m.readUnits)),
+			WriteCapacityUnits: aws.Float64(float64(m.writeUnits)),
 		},
 	}
 	if m.updateItem != nil {
