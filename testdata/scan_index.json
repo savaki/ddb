@@ -1,0 +1,18 @@
+{
+  "AttributesToGet": null,
+  "ConditionalOperator": null,
+  "ConsistentRead": false,
+  "ExclusiveStartKey": null,
+  "ExpressionAttributeNames": null,
+  "ExpressionAttributeValues": null,
+  "FilterExpression": null,
+  "IndexName": "gsi",
+  "Limit": null,
+  "ProjectionExpression": null,
+  "ReturnConsumedCapacity": "TOTAL",
+  "ScanFilter": null,
+  "Segment": 0,
+  "Select": null,
+  "TableName": "example",
+  "TotalSegments": 0
+}

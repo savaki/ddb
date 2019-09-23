@@ -36,6 +36,7 @@ type Scan struct {
 	debug          io.Writer
 	err            error
 	expr           *expression
+	indexName      string
 	totalSegments  int64
 }
 
@@ -44,7 +45,7 @@ func (s *Scan) makeScanInput(segment, totalSegments int64, startKey map[string]*
 		filterExpr = s.expr.ConditionExpression()
 	)
 
-	return &dynamodb.ScanInput{
+	input := dynamodb.ScanInput{
 		ConsistentRead:            aws.Bool(s.consistentRead),
 		ExclusiveStartKey:         startKey,
 		ExpressionAttributeNames:  s.expr.Names,
@@ -55,6 +56,11 @@ func (s *Scan) makeScanInput(segment, totalSegments int64, startKey map[string]*
 		TableName:                 aws.String(s.spec.TableName),
 		TotalSegments:             aws.Int64(s.totalSegments),
 	}
+	if s.indexName != "" {
+		input.IndexName = aws.String(s.indexName)
+	}
+
+	return &input
 }
 
 func (s *Scan) scanSegment(ctx context.Context, segment, totalSegments int64, fn func(item Item) (bool, error)) (stop bool, err error) {
@@ -203,6 +209,12 @@ func (s *Scan) FirstWithContext(ctx context.Context, v interface{}) error {
 	}
 
 	return nil
+}
+
+// Index to scan for
+func (s *Scan) IndexName(indexName string) *Scan {
+	s.indexName = indexName
+	return s
 }
 
 // TotalSegments allows for the Scan operation to run in parallel.  If not set, defaults

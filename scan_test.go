@@ -17,7 +17,8 @@ import (
 )
 
 type ScanTable struct {
-	ID string `dynamodbav:"id" ddb:"hash"`
+	ID   string `dynamodbav:"id" ddb:"hash"`
+	Name string `dynamodb:"name" ddb:"gsi_hash:gsi"`
 }
 
 func TestScan_First(t *testing.T) {
@@ -140,6 +141,22 @@ func TestScan_Condition(t *testing.T) {
 			makeScanInput(0, 1, nil)
 
 		assertEqual(t, input, "testdata/scan_condition.json")
+	})
+}
+
+func TestScan_IndexName(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
+		var (
+			mock  = &Mock{}
+			db    = New(mock)
+			table = db.MustTable("example", ScanTable{})
+		)
+
+		input := table.Scan().
+			IndexName("gsi").
+			makeScanInput(0, 1, nil)
+
+		assertEqual(t, input, "testdata/scan_index.json")
 	})
 }
 
