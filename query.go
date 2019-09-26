@@ -21,38 +21,22 @@ type Query struct {
 	attributes       []string
 }
 
+func (t *Table) Query(expr string, values ...interface{}) *Query {
+	query := &Query{
+		api:   t.ddb.api,
+		spec:  t.spec,
+		table: t.consumed,
+		expr: &expression{
+			attributes: t.spec.Attributes,
+		},
+	}
+	return query.KeyCondition(expr, values...)
+}
+
 // ConsumedCapacity captures consumed capacity to the property provided
 func (q *Query) ConsumedCapacity(capture *ConsumedCapacity) *Query {
 	q.request = capture
 	return q
-}
-
-// QueryInput returns the raw dynamodb QueryInput that will be submitted
-func (q *Query) QueryInput() (*dynamodb.QueryInput, error) {
-	if q.err != nil {
-		return nil, q.err
-	}
-
-	var indexName *string
-	if q.indexName != "" {
-		indexName = aws.String(q.indexName)
-	}
-
-	conditionExpression := q.expr.ConditionExpression()
-	filterExpression := q.expr.FilterExpression()
-	input := dynamodb.QueryInput{
-		ConsistentRead:            aws.Bool(q.consistentRead),
-		KeyConditionExpression:    conditionExpression,
-		ExpressionAttributeNames:  q.expr.Names,
-		ExpressionAttributeValues: q.expr.Values,
-		FilterExpression:          filterExpression,
-		IndexName:                 indexName,
-		ReturnConsumedCapacity:    aws.String(dynamodb.ReturnConsumedCapacityTotal),
-		ScanIndexForward:          aws.Bool(q.scanIndexForward),
-		Select:                    aws.String(dynamodb.SelectAllAttributes),
-		TableName:                 aws.String(q.spec.TableName),
-	}
-	return &input, nil
 }
 
 func (q *Query) ConsistentRead(enabled bool) *Query {
@@ -60,17 +44,8 @@ func (q *Query) ConsistentRead(enabled bool) *Query {
 	return q
 }
 
-func (q *Query) IndexName(indexName string) *Query {
-	q.indexName = indexName
-	return q
-}
-
-func (q *Query) KeyCondition(expr string, values ...interface{}) *Query {
-	if err := q.expr.Condition(expr, values...); err != nil {
-		q.err = err
-	}
-
-	return q
+func (q *Query) Each(fn func(item Item) (bool, error)) error {
+	return q.EachWithContext(defaultContext, fn)
 }
 
 func (q *Query) EachWithContext(ctx context.Context, fn func(item Item) (bool, error)) error {
@@ -118,10 +93,6 @@ func (q *Query) EachWithContext(ctx context.Context, fn func(item Item) (bool, e
 	return nil
 }
 
-func (q *Query) Each(fn func(item Item) (bool, error)) error {
-	return q.EachWithContext(defaultContext, fn)
-}
-
 // Filter allows for the query to be conditionally filtered
 func (q *Query) Filter(expr string, values ...interface{}) *Query {
 	if err := q.expr.Filter(expr, values...); err != nil {
@@ -129,6 +100,11 @@ func (q *Query) Filter(expr string, values ...interface{}) *Query {
 	}
 
 	return q
+}
+
+// First binds the first value and returns
+func (q *Query) First(v interface{}) error {
+	return q.FirstWithContext(defaultContext, v)
 }
 
 // FirstWithContext binds the first value and returns
@@ -141,9 +117,45 @@ func (q *Query) FirstWithContext(ctx context.Context, v interface{}) error {
 	})
 }
 
-// First binds the first value and returns
-func (q *Query) First(v interface{}) error {
-	return q.FirstWithContext(defaultContext, v)
+func (q *Query) IndexName(indexName string) *Query {
+	q.indexName = indexName
+	return q
+}
+
+func (q *Query) KeyCondition(expr string, values ...interface{}) *Query {
+	if err := q.expr.Condition(expr, values...); err != nil {
+		q.err = err
+	}
+
+	return q
+}
+
+// QueryInput returns the raw dynamodb QueryInput that will be submitted
+func (q *Query) QueryInput() (*dynamodb.QueryInput, error) {
+	if q.err != nil {
+		return nil, q.err
+	}
+
+	var indexName *string
+	if q.indexName != "" {
+		indexName = aws.String(q.indexName)
+	}
+
+	conditionExpression := q.expr.ConditionExpression()
+	filterExpression := q.expr.FilterExpression()
+	input := dynamodb.QueryInput{
+		ConsistentRead:            aws.Bool(q.consistentRead),
+		KeyConditionExpression:    conditionExpression,
+		ExpressionAttributeNames:  q.expr.Names,
+		ExpressionAttributeValues: q.expr.Values,
+		FilterExpression:          filterExpression,
+		IndexName:                 indexName,
+		ReturnConsumedCapacity:    aws.String(dynamodb.ReturnConsumedCapacityTotal),
+		ScanIndexForward:          aws.Bool(q.scanIndexForward),
+		Select:                    aws.String(dynamodb.SelectAllAttributes),
+		TableName:                 aws.String(q.spec.TableName),
+	}
+	return &input, nil
 }
 
 // ScanIndexForward when true returns the values in reverse sort key order
@@ -151,16 +163,4 @@ func (q *Query) First(v interface{}) error {
 func (q *Query) ScanIndexForward(enabled bool) *Query {
 	q.scanIndexForward = enabled
 	return q
-}
-
-func (t *Table) Query(expr string, values ...interface{}) *Query {
-	query := &Query{
-		api:   t.ddb.api,
-		spec:  t.spec,
-		table: t.consumed,
-		expr: &expression{
-			attributes: t.spec.Attributes,
-		},
-	}
-	return query.KeyCondition(expr, values...)
 }
