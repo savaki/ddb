@@ -39,13 +39,18 @@ func (p *Put) PutItemInput() (*dynamodb.PutItemInput, error) {
 		return nil, err
 	}
 
-	return &dynamodb.PutItemInput{
+	input := dynamodb.PutItemInput{
 		ConditionExpression:       p.expr.ConditionExpression(),
 		Item:                      item,
 		ExpressionAttributeNames:  p.expr.Names,
 		ExpressionAttributeValues: p.expr.Values,
 		TableName:                 aws.String(p.spec.TableName),
-	}, nil
+	}
+	if p.request != nil {
+		input.ReturnConsumedCapacity = aws.String(dynamodb.ReturnConsumedCapacityTotal)
+	}
+
+	return &input, nil
 }
 
 func (p *Put) ReturnValuesOnConditionCheckFailure(value string) *Put {

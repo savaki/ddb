@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -34,8 +35,16 @@ var (
 )
 
 type ConsumedCapacity struct {
-	ReadUnits  int64
-	WriteUnits int64
+	mux           sync.Mutex
+	capacityUnits float64
+	ReadUnits     int64
+	WriteUnits    int64
+}
+
+func (c *ConsumedCapacity) CapacityUnits() float64 {
+	c.mux.Lock()
+	defer c.mux.Unlock()
+	return c.capacityUnits
 }
 
 func (c *ConsumedCapacity) add(in *dynamodb.ConsumedCapacity) {
@@ -48,12 +57,22 @@ func (c *ConsumedCapacity) add(in *dynamodb.ConsumedCapacity) {
 	if units := in.WriteCapacityUnits; units != nil && *units > 0 {
 		atomic.AddInt64(&c.WriteUnits, int64(*units))
 	}
+
+	if in.CapacityUnits != nil {
+		c.mux.Lock()
+		c.capacityUnits += *in.CapacityUnits
+		c.mux.Unlock()
+	}
 }
 
 func (c *ConsumedCapacity) safeClone() ConsumedCapacity {
+	c.mux.Lock()
+	defer c.mux.Unlock()
+
 	return ConsumedCapacity{
-		ReadUnits:  atomic.LoadInt64(&c.ReadUnits),
-		WriteUnits: atomic.LoadInt64(&c.WriteUnits),
+		ReadUnits:     atomic.LoadInt64(&c.ReadUnits),
+		WriteUnits:    atomic.LoadInt64(&c.WriteUnits),
+		capacityUnits: c.capacityUnits,
 	}
 }
 
