@@ -12,6 +12,7 @@ type Query struct {
 	api              dynamodbiface.DynamoDBAPI
 	spec             *tableSpec
 	consistentRead   bool
+	selectAttributes string
 	scanIndexForward bool
 	request          *ConsumedCapacity
 	table            *ConsumedCapacity
@@ -141,6 +142,10 @@ func (q *Query) QueryInput() (*dynamodb.QueryInput, error) {
 		indexName = aws.String(q.indexName)
 	}
 
+	if q.selectAttributes == "" {
+		q.selectAttributes = dynamodb.SelectAllAttributes
+	}
+
 	conditionExpression := q.expr.ConditionExpression()
 	filterExpression := q.expr.FilterExpression()
 	input := dynamodb.QueryInput{
@@ -152,10 +157,16 @@ func (q *Query) QueryInput() (*dynamodb.QueryInput, error) {
 		IndexName:                 indexName,
 		ReturnConsumedCapacity:    aws.String(dynamodb.ReturnConsumedCapacityTotal),
 		ScanIndexForward:          aws.Bool(q.scanIndexForward),
-		Select:                    aws.String(dynamodb.SelectAllAttributes),
+		Select:                    aws.String(q.selectAttributes),
 		TableName:                 aws.String(q.spec.TableName),
 	}
 	return &input, nil
+}
+
+// Select attributes to return; defaults to dynamodb.SelectAllAttributes
+func (q *Query) Select(s string) *Query {
+	q.selectAttributes = s
+	return q
 }
 
 // ScanIndexForward when true returns the values in reverse sort key order
