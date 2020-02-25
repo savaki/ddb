@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
 )
 
+// Update encapsulates the UpdateItem action
 type Update struct {
 	api                                 dynamodbiface.DynamoDBAPI
 	spec                                *tableSpec
@@ -37,6 +38,7 @@ func (u *Update) returnValues() (string, error) {
 	}
 }
 
+// Add updates a number or a set
 func (u *Update) Add(expr string, values ...interface{}) *Update {
 	if err := u.expr.Add(expr, values...); err != nil {
 		u.err = err
@@ -45,6 +47,8 @@ func (u *Update) Add(expr string, values ...interface{}) *Update {
 	return u
 }
 
+// Condition applies a condition to the update.  When called multiple
+// times, the conditions will be and-ed with each other.
 func (u *Update) Condition(expr string, values ...interface{}) *Update {
 	if err := u.expr.Condition(expr, values...); err != nil {
 		u.err = err
@@ -58,6 +62,7 @@ func (u *Update) ConsumedCapacity(capture *ConsumedCapacity) *Update {
 	return u
 }
 
+// Delete deletes elements from a set
 func (u *Update) Delete(expr string, values ...interface{}) *Update {
 	if err := u.expr.Delete(expr, values...); err != nil {
 		u.err = err
@@ -66,6 +71,7 @@ func (u *Update) Delete(expr string, values ...interface{}) *Update {
 	return u
 }
 
+// Tx returns *dynamodb.TransactWriteItem suitable for use in a transaction
 func (u *Update) Tx() (*dynamodb.TransactWriteItem, error) {
 	input, err := u.UpdateItemInput()
 	if err != nil {
@@ -95,17 +101,20 @@ func (u *Update) NewValues(v interface{}) *Update {
 	return u
 }
 
+// OldValues captures the old values into the provided value
 func (u *Update) OldValues(v interface{}) *Update {
 	u.oldValues = v
 
 	return u
 }
 
+// Range specifies the optional range key for the update
 func (u *Update) Range(rangeKey interface{}) *Update {
 	u.rangeKey = rangeKey
 	return u
 }
 
+// Remove an attribute from an Item
 func (u *Update) Remove(expr string, values ...interface{}) *Update {
 	if err := u.expr.Remove(expr, values...); err != nil {
 		u.err = err
@@ -119,6 +128,7 @@ func (u *Update) ReturnValuesOnConditionCheckFailure(value string) *Update {
 	return u
 }
 
+// RunWithContext invokes the update command using the provided context
 func (u *Update) RunWithContext(ctx context.Context) error {
 	if u.err != nil {
 		return u.err

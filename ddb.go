@@ -118,10 +118,13 @@ func (d *DDB) MustTable(tableName string, model interface{}) *Table {
 	return table
 }
 
+// WriteTx converts ddb operations into instances of *dynamodb.TransactWriteItem
 type WriteTx interface {
 	Tx() (*dynamodb.TransactWriteItem, error)
 }
 
+// TransactWriteItemsWithContext applies the provided operations in a dynamodb transaction.
+// Subject to the limits of of TransactWriteItems.
 func (d *DDB) TransactWriteItemsWithContext(ctx context.Context, items ...WriteTx) (*dynamodb.TransactWriteItemsOutput, error) {
 	token := d.tokenFunc()
 	input := dynamodb.TransactWriteItemsInput{
