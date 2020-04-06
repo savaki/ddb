@@ -116,6 +116,22 @@ func TestQuery_First(t *testing.T) {
 			t.Fatalf("got nil; want not nil")
 		}
 	})
+
+	t.Run("not found", func(t *testing.T) {
+		var (
+			mock  = &Mock{}
+			table = New(mock).MustTable("example", QueryExample{})
+		)
+
+		var got QueryExample
+		err := table.Query("not-found").First(got)
+		if err == nil {
+			t.Fatalf("got nil; want not nil")
+		}
+		if v, ok := err.(interface{ Code() string }); !ok || v.Code() != ErrItemNotFound {
+			t.Fatalf("got %v; want ErrItemNotFound", err)
+		}
+	})
 }
 
 func TestQuery_Filter(t *testing.T) {

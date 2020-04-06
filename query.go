@@ -110,12 +110,21 @@ func (q *Query) First(v interface{}) error {
 
 // FirstWithContext binds the first value and returns
 func (q *Query) FirstWithContext(ctx context.Context, v interface{}) error {
-	return q.EachWithContext(ctx, func(item Item) (bool, error) {
+	var found bool
+	callback := func(item Item) (bool, error) {
 		if err := item.Unmarshal(v); err != nil {
 			return false, err
 		}
+		found = true
 		return false, nil
-	})
+	}
+	if err := q.EachWithContext(ctx, callback); err != nil {
+		return err
+	}
+	if !found {
+		return errorf(ErrItemNotFound, "item not found")
+	}
+	return nil
 }
 
 func (q *Query) IndexName(indexName string) *Query {
