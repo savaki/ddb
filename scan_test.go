@@ -22,8 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -201,13 +199,19 @@ func TestScan_ConditionLive(t *testing.T) {
 	defer table.DeleteTableIfExists(ctx)
 
 	err = table.Put(Sample{ID: "a"}).RunWithContext(ctx)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatalf("got %v; want nil", err)
+	}
 
 	err = table.Put(Sample{ID: "b"}).RunWithContext(ctx)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatalf("got %v; want nil", err)
+	}
 
 	err = table.Put(Sample{ID: "c"}).RunWithContext(ctx)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatalf("got %v; want nil", err)
+	}
 
 	var samples []Sample
 	fn := func(item Item) (bool, error) {
@@ -224,9 +228,16 @@ func TestScan_ConditionLive(t *testing.T) {
 		Filter("#ID = ?", "b").
 		TotalSegments(3).
 		EachWithContext(ctx, fn)
-	assert.Nil(t, err)
-	assert.Len(t, samples, 1)
-	assert.Equal(t, Sample{ID: "b"}, samples[0])
+	if err != nil {
+		t.Fatalf("got %v; want nil", err)
+	}
+	if got, want := len(samples), 1; got != want {
+		t.Fatalf("got %v; want %v", got, want)
+	}
+	want := Sample{ID: "b"}
+	if got := samples[0]; got != want {
+		t.Fatalf("got %v; want %v", got, want)
+	}
 }
 
 func TestScan_ConsistentRead(t *testing.T) {

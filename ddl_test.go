@@ -30,7 +30,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/tj/assert"
 )
 
 type Sample struct {
@@ -257,7 +256,9 @@ func TestTable_CreateTableIfNotExists_Live(t *testing.T) {
 		table := New(api).MustTable(tableName, GSI{})
 
 		err := table.CreateTableIfNotExists(ctx, WithBillingMode(dynamodb.BillingModePayPerRequest))
-		assert.Nil(t, err)
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
 		defer table.DeleteTableIfExists(ctx)
 	})
 
@@ -270,7 +271,9 @@ func TestTable_CreateTableIfNotExists_Live(t *testing.T) {
 		table := New(api).MustTable(tableName, GSI{})
 
 		err := table.CreateTableIfNotExists(ctx)
-		assert.Nil(t, err)
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
 		defer table.DeleteTableIfExists(ctx)
 
 		want := GSI{
@@ -278,15 +281,21 @@ func TestTable_CreateTableIfNotExists_Live(t *testing.T) {
 			GID: "gid",
 		}
 		err = table.Put(want).Run()
-		assert.Nil(t, err)
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
 
 		query := table.Query("#GID = ?", want.GID).
 			IndexName("global")
 
 		var got GSI
 		err = query.First(&got)
-		assert.Nil(t, err)
-		assert.Equal(t, got, want)
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("got %v; want %v", got, want)
+		}
 	})
 
 	t.Run("gsi - hash and range", func(t *testing.T) {
@@ -299,7 +308,9 @@ func TestTable_CreateTableIfNotExists_Live(t *testing.T) {
 		table := New(api).MustTable(tableName, GSI{})
 
 		err := table.CreateTableIfNotExists(ctx)
-		assert.Nil(t, err)
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
 		defer table.DeleteTableIfExists(ctx)
 
 		want := GSI{
@@ -308,14 +319,20 @@ func TestTable_CreateTableIfNotExists_Live(t *testing.T) {
 			Range: "range",
 		}
 		err = table.Put(want).Run()
-		assert.Nil(t, err)
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
 
 		query := table.Query("#Hash = ? and #Range = ?", want.Hash, want.Range).
 			IndexName("global")
 
 		var got GSI
 		err = query.First(&got)
-		assert.Nil(t, err)
-		assert.Equal(t, got, want)
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("got %v; want %v", got, want)
+		}
 	})
 }
