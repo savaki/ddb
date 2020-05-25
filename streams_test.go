@@ -15,6 +15,7 @@
 package ddb
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 )
@@ -73,4 +74,40 @@ func TestEpochSeconds_Time(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEpochSeconds_JSON(t *testing.T) {
+	t.Run("simple", func(t *testing.T) {
+		want := EpochSeconds(123)
+		data, err := json.Marshal(want)
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+
+		var got EpochSeconds
+		err = json.Unmarshal(data, &got)
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+
+		if got != want {
+			t.Fatalf("got %v; want %v", got, want)
+		}
+	})
+
+	t.Run("struct", func(t *testing.T) {
+		type T struct {
+			Unix EpochSeconds
+		}
+
+		const text = `{"Unix":1.59041719E9}`
+		var got T
+		err := json.Unmarshal([]byte(text), &got)
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+		if want := EpochSeconds(1590417190); got.Unix != want {
+			t.Fatalf("got %v; want %v", got, want)
+		}
+	})
 }

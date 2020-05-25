@@ -15,6 +15,7 @@
 package ddb
 
 import (
+	"encoding/json"
 	"regexp"
 	"time"
 
@@ -23,6 +24,21 @@ import (
 
 // EpochSeconds expresses time in unix seconds
 type EpochSeconds int64
+
+// MarshalJSON implements json.Marshaler
+func (e EpochSeconds) MarshalJSON() ([]byte, error) {
+	return json.Marshal(float64(e))
+}
+
+// UnmarshalJSON implements json.Unmarshaler
+func (e *EpochSeconds) UnmarshalJSON(data []byte) error {
+	var v float64
+	if err := json.Unmarshal(data, &v); err != nil {
+		return nil
+	}
+	*e = EpochSeconds(v)
+	return nil
+}
 
 // EpochSeconds returns time.Time
 func (e EpochSeconds) Time() time.Time {
