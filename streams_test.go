@@ -110,4 +110,20 @@ func TestEpochSeconds_JSON(t *testing.T) {
 			t.Fatalf("got %v; want %v", got, want)
 		}
 	})
+
+	t.Run("null", func(t *testing.T) {
+		type T struct {
+			Unix EpochSeconds
+		}
+
+		const text = `{"Unix":null}`
+		var got T
+		err := json.Unmarshal([]byte(text), &got)
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+		if want := EpochSeconds(0); got.Unix != want {
+			t.Fatalf("got %v; want %v", got, want)
+		}
+	})
 }
