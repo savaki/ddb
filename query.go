@@ -41,9 +41,7 @@ func (t *Table) Query(expr string, values ...interface{}) *Query {
 		api:   t.ddb.api,
 		spec:  t.spec,
 		table: t.consumed,
-		expr: &expression{
-			attributes: t.spec.Attributes,
-		},
+		expr:  newExpression(t.spec.Attributes...),
 	}
 	return query.KeyCondition(expr, values...)
 }

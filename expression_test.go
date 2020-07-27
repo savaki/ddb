@@ -64,7 +64,7 @@ func TestParse(t *testing.T) {
 
 	for label, tc := range testCases {
 		t.Run(label, func(t *testing.T) {
-			expr := &expression{}
+			expr := newExpression()
 			got, err := expr.parse(tc.Expr, tc.Values...)
 			if err != nil {
 				t.Fatalf("got %v; want nil", err)
@@ -77,7 +77,7 @@ func TestParse(t *testing.T) {
 	}
 
 	t.Run("too many args", func(t *testing.T) {
-		expr := &expression{}
+		expr := newExpression()
 		_, err := expr.parse("a = b ", "not-used")
 		if err == nil {
 			t.Fatal("got nil; want not nil")
@@ -85,7 +85,7 @@ func TestParse(t *testing.T) {
 	})
 
 	t.Run("not enough names", func(t *testing.T) {
-		expr := &expression{}
+		expr := newExpression()
 		_, err := expr.parse("#? = 1")
 		if err == nil {
 			t.Fatal("got nil; want not nil")
@@ -93,7 +93,7 @@ func TestParse(t *testing.T) {
 	})
 
 	t.Run("name not a string", func(t *testing.T) {
-		expr := &expression{}
+		expr := newExpression()
 		_, err := expr.parse("#? = 1", 123)
 		if err == nil {
 			t.Fatal("got nil; want not nil")
@@ -101,7 +101,7 @@ func TestParse(t *testing.T) {
 	})
 
 	t.Run("not enough values", func(t *testing.T) {
-		expr := &expression{}
+		expr := newExpression()
 		_, err := expr.parse("a = ?")
 		if err == nil {
 			t.Fatal("got nil; want not nil")
@@ -130,7 +130,7 @@ func Test_expression_FilterExpression(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			expr := &expression{}
+			expr := newExpression()
 			err := expr.Filter(tt.expr, tt.values...)
 			if err != nil {
 				t.Fatalf("got %v; want nil", err)

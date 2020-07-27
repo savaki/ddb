@@ -123,8 +123,6 @@ func (t *Table) Put(v interface{}) *Put {
 		spec:  t.spec,
 		value: v,
 		table: t.consumed,
-		expr: &expression{
-			attributes: t.spec.Attributes,
-		},
+		expr:  newExpression(t.spec.Attributes...),
 	}
 }

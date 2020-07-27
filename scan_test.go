@@ -242,7 +242,7 @@ func TestScan_ConditionLive(t *testing.T) {
 
 func TestScan_ConsistentRead(t *testing.T) {
 	s := &Scan{
-		expr: &expression{},
+		expr: newExpression(),
 		spec: &tableSpec{TableName: "example"},
 	}
 	s.ConsistentRead(true)

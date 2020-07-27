@@ -224,8 +224,6 @@ func (t *Table) Update(hashKey interface{}) *Update {
 		spec:    t.spec,
 		hashKey: hashKey,
 		table:   t.consumed,
-		expr: &expression{
-			attributes: t.spec.Attributes,
-		},
+		expr:    newExpression(t.spec.Attributes...),
 	}
 }

@@ -131,8 +131,6 @@ func (t *Table) Delete(hashKey interface{}) *Delete {
 		spec:    t.spec,
 		hashKey: hashKey,
 		table:   t.consumed,
-		expr: &expression{
-			attributes: t.spec.Attributes,
-		},
+		expr:    newExpression(t.spec.Attributes...),
 	}
 }

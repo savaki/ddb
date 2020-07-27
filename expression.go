@@ -38,6 +38,12 @@ type expression struct {
 	Sets       *strings.Builder
 }
 
+func newExpression(attributes ...*attributeSpec) *expression {
+	return &expression{
+		attributes: attributes,
+	}
+}
+
 func (e *expression) addExpressionAttributeName(name string) string {
 	if e.Names == nil {
 		e.Names = map[string]*string{}
