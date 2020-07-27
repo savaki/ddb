@@ -66,9 +66,10 @@ func TestEpochSeconds_Time(t *testing.T) {
 		},
 	}
 
+	loc, _ := time.LoadLocation("US/Central")
 	for label, tc := range testCases {
 		t.Run(label, func(t *testing.T) {
-			tm := tc.EpochSeconds.Time()
+			tm := tc.EpochSeconds.Time().In(loc)
 			if got, want := tm.Format(time.RFC3339), tc.Want; got != want {
 				t.Fatalf("got %v; want %v", got, want)
 			}
