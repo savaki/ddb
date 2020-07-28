@@ -47,9 +47,9 @@ type keySpec struct {
 }
 
 type attributeSpec struct {
-	FieldName     string // original field name
-	AttributeName string
-	AttributeType string
+	FieldName     string // FieldName from struct
+	AttributeName string // AttributeName contains dynamodb attribute name
+	AttributeType string // AttributeType holds dynamodb type e.g. S, N, B ...
 }
 
 type indexSpec struct {

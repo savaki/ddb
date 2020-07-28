@@ -48,6 +48,10 @@ func (p *Put) ConsumedCapacity(capture *ConsumedCapacity) *Put {
 }
 
 func (p *Put) PutItemInput() (*dynamodb.PutItemInput, error) {
+	if p.err != nil {
+		return nil, p.err
+	}
+
 	item, err := marshalMap(p.value)
 	if err != nil {
 		return nil, err

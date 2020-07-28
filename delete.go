@@ -49,6 +49,10 @@ func (d *Delete) ConsumedCapacity(capture *ConsumedCapacity) *Delete {
 }
 
 func (d *Delete) DeleteItemInput() (*dynamodb.DeleteItemInput, error) {
+	if d.err != nil {
+		return nil, d.err
+	}
+
 	key, err := makeKey(d.spec, d.hashKey, d.rangeKey)
 	if err != nil {
 		return nil, err

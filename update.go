@@ -191,6 +191,10 @@ func (u *Update) Set(expr string, values ...interface{}) *Update {
 }
 
 func (u *Update) UpdateItemInput() (*dynamodb.UpdateItemInput, error) {
+	if u.err != nil {
+		return nil, u.err
+	}
+
 	key, err := makeKey(u.spec, u.hashKey, u.rangeKey)
 	if err != nil {
 		return nil, err
