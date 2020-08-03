@@ -16,6 +16,9 @@ package ddb
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -23,17 +26,21 @@ import (
 )
 
 type Query struct {
-	api              dynamodbiface.DynamoDBAPI
-	spec             *tableSpec
-	consistentRead   bool
-	selectAttributes string
-	scanIndexForward bool
-	request          *ConsumedCapacity
-	table            *ConsumedCapacity
-	err              error
-	expr             *expression
-	indexName        string
-	attributes       []string
+	api                dynamodbiface.DynamoDBAPI
+	spec               *tableSpec
+	consistentRead     bool
+	lastEvaluatedKey   *map[string]*dynamodb.AttributeValue
+	lastEvaluatedToken *string
+	limit              int64
+	selectAttributes   string
+	scanIndexForward   bool
+	startKey           map[string]*dynamodb.AttributeValue
+	request            *ConsumedCapacity
+	table              *ConsumedCapacity
+	err                error
+	expr               *expression
+	indexName          string
+	attributes         []string
 }
 
 func (t *Table) Query(expr string, values ...interface{}) *Query {
@@ -61,17 +68,36 @@ func (q *Query) Each(fn func(item Item) (bool, error)) error {
 	return q.EachWithContext(defaultContext, fn)
 }
 
-func (q *Query) EachWithContext(ctx context.Context, fn func(item Item) (bool, error)) error {
+func (q *Query) EachWithContext(ctx context.Context, fn func(item Item) (bool, error)) (err error) {
 	if q.err != nil {
 		return q.err
 	}
+
+	startKey := q.startKey
+	defer func() {
+		if q.lastEvaluatedKey != nil {
+			*q.lastEvaluatedKey = startKey
+		}
+		if q.lastEvaluatedToken != nil {
+			switch {
+			case len(startKey) == 0:
+				*q.lastEvaluatedToken = ""
+
+			default:
+				data, e := json.Marshal(startKey)
+				if e != nil {
+					err = fmt.Errorf("failed to marshal startKey: %w", err)
+				}
+				*q.lastEvaluatedToken = base64.StdEncoding.EncodeToString(data)
+			}
+		}
+	}()
 
 	input, err := q.QueryInput()
 	if err != nil {
 		return err
 	}
 
-	var startKey map[string]*dynamodb.AttributeValue
 	for {
 		input.ExclusiveStartKey = startKey
 
@@ -79,6 +105,7 @@ func (q *Query) EachWithContext(ctx context.Context, fn func(item Item) (bool, e
 		if err != nil {
 			return err
 		}
+		startKey = output.LastEvaluatedKey
 
 		item := baseItem{}
 		for _, rawItem := range output.Items {
@@ -97,8 +124,10 @@ func (q *Query) EachWithContext(ctx context.Context, fn func(item Item) (bool, e
 			q.request.add(output.ConsumedCapacity)
 		}
 
-		startKey = output.LastEvaluatedKey
 		if startKey == nil {
+			break
+		}
+		if q.limit > 0 {
 			break
 		}
 	}
@@ -152,6 +181,12 @@ func (q *Query) KeyCondition(expr string, values ...interface{}) *Query {
 	return q
 }
 
+// Limit returns at most N elements; 0 indicates return all elements
+func (q *Query) Limit(limit int64) *Query {
+	q.limit = limit
+	return q
+}
+
 // QueryInput returns the raw dynamodb QueryInput that will be submitted
 func (q *Query) QueryInput() (*dynamodb.QueryInput, error) {
 	if q.err != nil {
@@ -171,15 +206,19 @@ func (q *Query) QueryInput() (*dynamodb.QueryInput, error) {
 	filterExpression := q.expr.FilterExpression()
 	input := dynamodb.QueryInput{
 		ConsistentRead:            aws.Bool(q.consistentRead),
-		KeyConditionExpression:    conditionExpression,
+		ExclusiveStartKey:         q.startKey,
 		ExpressionAttributeNames:  q.expr.Names,
 		ExpressionAttributeValues: q.expr.Values,
 		FilterExpression:          filterExpression,
 		IndexName:                 indexName,
+		KeyConditionExpression:    conditionExpression,
 		ReturnConsumedCapacity:    aws.String(dynamodb.ReturnConsumedCapacityTotal),
 		ScanIndexForward:          aws.Bool(q.scanIndexForward),
 		Select:                    aws.String(q.selectAttributes),
 		TableName:                 aws.String(q.spec.TableName),
+	}
+	if q.limit > 0 {
+		input.Limit = aws.Int64(q.limit)
 	}
 	return &input, nil
 }
@@ -190,9 +229,48 @@ func (q *Query) Select(s string) *Query {
 	return q
 }
 
+// LastEvaluatedKey stores the last evaluated key into the provided value
+func (q *Query) LastEvaluatedKey(lastEvaluatedKey *map[string]*dynamodb.AttributeValue) *Query {
+	q.lastEvaluatedKey = lastEvaluatedKey
+	return q
+}
+
+// LastEvaluatedToken stores the last evaluated key as a base64 encoded string
+func (q *Query) LastEvaluatedToken(lastEvaluatedToken *string) *Query {
+	q.lastEvaluatedToken = lastEvaluatedToken
+	return q
+}
+
 // ScanIndexForward when true returns the values in reverse sort key order
 // https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html
 func (q *Query) ScanIndexForward(enabled bool) *Query {
 	q.scanIndexForward = enabled
 	return q
+}
+
+// StartKey assigns the continuation key used for query pagination
+func (q *Query) StartKey(startKey map[string]*dynamodb.AttributeValue) *Query {
+	q.startKey = startKey
+	return q
+}
+
+// StartToken encodes start key as a base64 encoded string
+func (q *Query) StartToken(token string) *Query {
+	if token == "" {
+		return q.StartKey(nil)
+	}
+
+	data, err := base64.StdEncoding.DecodeString(token)
+	if err != nil {
+		q.err = fmt.Errorf("failed to base64 decode start token: %w", err)
+		return q
+	}
+
+	var startKey map[string]*dynamodb.AttributeValue
+	if err := json.Unmarshal(data, &startKey); err != nil {
+		q.err = fmt.Errorf("failed to json decode start token:% w", err)
+		return q
+	}
+
+	return q.StartKey(startKey)
 }

@@ -15,10 +15,42 @@
 package ddb
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 )
+
+func withTable(t *testing.T, schema interface{}, callback func(ctx context.Context, table *Table)) {
+	var (
+		s = session.Must(session.NewSession(aws.NewConfig().
+			WithCredentials(credentials.NewStaticCredentials("blah", "blah", "")).
+			WithEndpoint("http://localhost:8000").
+			WithRegion("us-west-2")))
+		api       = dynamodb.New(s)
+		client    = New(api)
+		tableName = fmt.Sprintf("table-%v", time.Now().UnixNano())
+		table     = client.MustTable(tableName, schema)
+	)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// appointment
+	err := table.CreateTableIfNotExists(ctx)
+	if err != nil {
+		t.Fatalf("got %v; want nil", err)
+	}
+	defer table.DeleteTableIfExists(ctx)
+
+	callback(ctx, table)
+}
 
 type QueryExample struct {
 	ID   string `ddb:"hash"`
@@ -179,5 +211,135 @@ func TestQuery_Filter(t *testing.T) {
 		if err == nil {
 			t.Fatalf("got nil; want not nil")
 		}
+	})
+}
+
+func TestQuery_EachWithContext(t *testing.T) {
+	const pk = "pk"
+
+	type Record struct {
+		PK string `dynamodb:"pk" ddb:"hash"`
+		SK int    `dynamodb:"sk" ddb:"range"`
+	}
+
+	withTable(t, Record{}, func(ctx context.Context, table *Table) {
+		const n = 10
+		for i := 0; i < n; i++ {
+			record := Record{
+				PK: pk,
+				SK: i,
+			}
+
+			err := table.Put(record).Run()
+			if err != nil {
+				t.Fatalf("got %v; want nil", err)
+			}
+		}
+
+		findAll := func(query *Query) (int, map[string]*dynamodb.AttributeValue, string, error) {
+			var records []Record
+			callback := func(item Item) (bool, error) {
+				var r Record
+				if err := item.Unmarshal(&r); err != nil {
+					return false, nil
+				}
+				records = append(records, r)
+				return true, nil
+			}
+
+			var lastEvaluatedKey map[string]*dynamodb.AttributeValue
+			var lastToken string
+			query = query.
+				LastEvaluatedKey(&lastEvaluatedKey).
+				LastEvaluatedToken(&lastToken)
+
+			if err := query.Each(callback); err != nil {
+				t.Fatalf("got %v; want nil", err)
+			}
+
+			return len(records), lastEvaluatedKey, lastToken, nil
+		}
+
+		t.Run("all", func(t *testing.T) {
+			query := table.Query("#PK = ?", pk)
+
+			got, lastKey, lastToken, err := findAll(query)
+			if err != nil {
+				t.Fatalf("got %v; want nil", err)
+			}
+			if want := n; got != want {
+				t.Fatalf("got %v; want %v", got, want)
+			}
+			if got, want := len(lastKey), 0; got != want {
+				t.Fatalf("got %v; want %v", got, want)
+			}
+			if got, want := lastToken, ""; got != want {
+				t.Fatalf("got %v; want %v", got, want)
+			}
+		})
+
+		t.Run("paginate by key", func(t *testing.T) {
+			for _, want := range []int{1, 2, 4, 8} {
+				t.Run(fmt.Sprintf("limit %v", want), func(t *testing.T) {
+					query := table.Query("#PK = ?", pk).
+						Limit(int64(want))
+
+					got, lastKey, _, err := findAll(query)
+					if err != nil {
+						t.Fatalf("got %v; want nil", err)
+					}
+					if got != want {
+						t.Fatalf("got %v; want %v", got, want)
+					}
+					if lastKey == nil {
+						t.Fatalf("got nil; want not nil")
+					}
+
+					// remainder
+					query = table.Query("#PK = ?", pk).
+						StartKey(lastKey)
+
+					remain, lastKey, _, err := findAll(query)
+					if err != nil {
+						t.Fatalf("got %v; want nil", err)
+					}
+					if got, want := got+remain, n; got != want {
+						t.Fatalf("got %v; want %v", got, want)
+					}
+				})
+			}
+		})
+
+		t.Run("paginate by token", func(t *testing.T) {
+			for _, want := range []int{1, 2, 4, 8} {
+				t.Run(fmt.Sprintf("limit %v", want), func(t *testing.T) {
+					query := table.Query("#PK = ?", pk).
+						Limit(int64(want))
+
+					got, _, lastToken, err := findAll(query)
+					if err != nil {
+						t.Fatalf("got %v; want nil", err)
+					}
+					if got != want {
+						t.Fatalf("got %v; want %v", got, want)
+					}
+					if lastToken == "" {
+						t.Fatalf("got blank; want not not blank")
+					}
+
+					// remainder
+					query = table.Query("#PK = ?", pk).
+						StartToken(lastToken)
+
+					remain, _, lastToken, err := findAll(query)
+					if err != nil {
+						t.Fatalf("got %v; want nil", err)
+					}
+					if got, want := got+remain, n; got != want {
+						t.Fatalf("got %v; want %v", got, want)
+					}
+				})
+			}
+		})
 	})
 }
