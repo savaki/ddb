@@ -343,3 +343,59 @@ func TestQuery_EachWithContext(t *testing.T) {
 		})
 	})
 }
+
+func TestQuery_FindAllWithContext(t *testing.T) {
+	type Record struct {
+		PK string `dynamodb:"pk" ddb:"hash"`
+		SK int    `dynamodb:"sk" ddb:"range"`
+	}
+
+	withTable(t, Record{}, func(ctx context.Context, table *Table) {
+		record := Record{
+			PK: "pk",
+			SK: 123,
+		}
+		err := table.Put(record).Run()
+		if err != nil {
+			t.Fatalf("got %v; want nil", err)
+		}
+
+		t.Run("struct", func(t *testing.T) {
+			var records []Record
+			query := table.Query("#PK = ?", "pk")
+			err = query.FindAll(&records)
+			if err != nil {
+				t.Fatalf("got %v; want nil", err)
+			}
+
+			if got, want := len(records), 1; got != want {
+				t.Fatalf("got %v; want %v", got, want)
+			}
+			if got, want := records[0].PK, record.PK; got != want {
+				t.Fatalf("got %v; want %v", got, want)
+			}
+			if got, want := records[0].SK, record.SK; got != want {
+				t.Fatalf("got %v; want %v", got, want)
+			}
+		})
+
+		t.Run("struct", func(t *testing.T) {
+			var records []*Record
+			query := table.Query("#PK = ?", "pk")
+			err = query.FindAll(&records)
+			if err != nil {
+				t.Fatalf("got %v; want nil", err)
+			}
+
+			if got, want := len(records), 1; got != want {
+				t.Fatalf("got %v; want %v", got, want)
+			}
+			if got, want := records[0].PK, record.PK; got != want {
+				t.Fatalf("got %v; want %v", got, want)
+			}
+			if got, want := records[0].SK, record.SK; got != want {
+				t.Fatalf("got %v; want %v", got, want)
+			}
+		})
+	})
+}

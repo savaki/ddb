@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"reflect"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -165,6 +166,56 @@ func (q *Query) FirstWithContext(ctx context.Context, v interface{}) error {
 	if !found {
 		return errorf(ErrItemNotFound, "item not found")
 	}
+	return nil
+}
+
+// FindAll returns all record
+func (q *Query) FindAll(v interface{}) error {
+	return q.FindAllWithContext(defaultContext, v)
+}
+
+// FindAll returns all record using context provided
+func (q *Query) FindAllWithContext(ctx context.Context, v interface{}) error {
+	if v == nil {
+		return nil
+	}
+
+	slice := reflect.TypeOf(v)
+	if slice.Kind() != reflect.Ptr {
+		return fmt.Errorf("want ptr as input, got %T", v)
+	}
+
+	slice = slice.Elem()
+	if slice.Kind() != reflect.Slice {
+		return fmt.Errorf("want ptr to slice as input, got %T", v)
+	}
+	records := reflect.New(slice).Elem()
+
+	element := slice.Elem()
+	isPtr := element.Kind() == reflect.Ptr
+	if isPtr {
+		element = element.Elem()
+	}
+
+	callback := func(item Item) (bool, error) {
+		v := reflect.New(element).Interface()
+		if err := item.Unmarshal(&v); err != nil {
+			return false, nil
+		}
+		record := reflect.ValueOf(v)
+		if !isPtr {
+			record = record.Elem()
+		}
+		records.Set(reflect.Append(records, record))
+		return true, nil
+	}
+
+	if err := q.EachWithContext(ctx, callback); err != nil {
+		return err
+	}
+
+	reflect.ValueOf(v).Elem().Set(records)
+
 	return nil
 }
 
