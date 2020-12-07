@@ -28,12 +28,20 @@ import (
 
 // Item provides handle to each record that can be unmarshalled
 type Item interface {
+	// Raw returns the raw value of the element
+	Raw() map[string]*dynamodb.AttributeValue
+
 	// Unmarshal the record into the provided interface
 	Unmarshal(v interface{}) error
 }
 
 type baseItem struct {
 	raw map[string]*dynamodb.AttributeValue
+}
+
+// Raw implements Item
+func (b baseItem) Raw() map[string]*dynamodb.AttributeValue {
+	return b.raw
 }
 
 func (b baseItem) Unmarshal(v interface{}) error {
