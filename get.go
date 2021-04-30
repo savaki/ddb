@@ -39,6 +39,9 @@ type getTx struct {
 }
 
 func (g getTx) Decode(v *dynamodb.ItemResponse) error {
+	if len(v.Item) == 0 {
+		return errorf(ErrItemNotFound, "item not found")
+	}
 	return dynamodbattribute.UnmarshalMap(v.Item, g.value)
 }
 

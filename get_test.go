@@ -150,6 +150,11 @@ func TestLive(t *testing.T) {
 	if !reflect.DeepEqual(gotTx, want) {
 		t.Fatalf("got %v; want %v", gotTx, want)
 	}
+
+	err = client.TransactGetItems(table.Get("blah").ScanTx(&gotTx))
+	if got, want := IsItemNotFoundError(err), true; got != want {
+		t.Fatalf("got %#v; want ItemNotFoundError", err)
+	}
 }
 
 func TestGet_Range(t *testing.T) {
