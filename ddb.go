@@ -17,6 +17,7 @@ package ddb
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -118,6 +119,72 @@ func (d *DDB) MustTable(tableName string, model interface{}) *Table {
 	return table
 }
 
+// GetTx encapsulates a transactional get operation
+type GetTx interface {
+	// Decode the response from AWS
+	Decode(v *dynamodb.ItemResponse) error
+	// Tx generates the get input
+	Tx() (*dynamodb.TransactGetItem, error)
+}
+
+// TransactGetItemsWithContext wraps the get operations using a TransactGetItems
+func (d *DDB) TransactGetItemsWithContext(ctx context.Context, gets ...GetTx) (err error) {
+	input := dynamodb.TransactGetItemsInput{
+		TransactItems: make([]*dynamodb.TransactGetItem, 0, len(gets)),
+	}
+	for _, get := range gets {
+		v, err := get.Tx()
+		if err != nil {
+			return err
+		}
+		input.TransactItems = append(input.TransactItems, v)
+	}
+
+	var (
+		timeout = 200 * time.Millisecond
+		e       error
+	)
+
+loop:
+	for attempt := 1; attempt <= 4; attempt++ {
+		output, err := d.api.TransactGetItemsWithContext(ctx, &input)
+		if err != nil {
+			var tce *dynamodb.TransactionCanceledException
+			if ok := errors.As(err, &tce); ok {
+				for _, reason := range tce.CancellationReasons {
+					if aws.StringValue(reason.Code) == "TransactionConflict" {
+						select {
+						case <-ctx.Done():
+							return ctx.Err()
+						case <-time.After(timeout):
+							timeout *= 2 // exponential backoff
+							e = err
+							continue loop
+						}
+					}
+				}
+			}
+			return err
+		}
+
+		for i, item := range output.Responses {
+			get := gets[i]
+			if err := get.Decode(item); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	return e
+}
+
+// TransactGetItems allows TransactGetItems to be called without a context
+func (d *DDB) TransactGetItems(items ...GetTx) error {
+	return d.TransactGetItemsWithContext(defaultContext, items...)
+}
+
 // WriteTx converts ddb operations into instances of *dynamodb.TransactWriteItem
 type WriteTx interface {
 	Tx() (*dynamodb.TransactWriteItem, error)
@@ -133,11 +200,11 @@ func (d *DDB) TransactWriteItemsWithContext(ctx context.Context, items ...WriteT
 	}
 
 	for _, item := range items {
-		i, err := item.Tx()
+		v, err := item.Tx()
 		if err != nil {
 			return nil, err
 		}
-		input.TransactItems = append(input.TransactItems, i)
+		input.TransactItems = append(input.TransactItems, v)
 	}
 
 	return d.api.TransactWriteItemsWithContext(ctx, &input)

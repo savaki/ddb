@@ -33,6 +33,29 @@ type Get struct {
 	request        *ConsumedCapacity
 }
 
+type getTx struct {
+	get   *Get
+	value interface{}
+}
+
+func (g getTx) Decode(v *dynamodb.ItemResponse) error {
+	return dynamodbattribute.UnmarshalMap(v.Item, g.value)
+}
+
+func (g getTx) Tx() (*dynamodb.TransactGetItem, error) {
+	key, err := makeKey(g.get.spec, g.get.hashKey, g.get.rangeKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dynamodb.TransactGetItem{
+		Get: &dynamodb.Get{
+			Key:       key,
+			TableName: aws.String(g.get.spec.TableName),
+		},
+	}, nil
+}
+
 func (g *Get) ConsistentRead(enabled bool) *Get {
 	g.consistentRead = true
 	return g
@@ -92,6 +115,13 @@ func (g *Get) ScanWithContext(ctx context.Context, v interface{}) error {
 
 func (g *Get) Scan(v interface{}) error {
 	return g.ScanWithContext(defaultContext, v)
+}
+
+func (g *Get) ScanTx(v interface{}) GetTx {
+	return getTx{
+		get:   g,
+		value: v,
+	}
 }
 
 func (t *Table) Get(hashKey interface{}) *Get {

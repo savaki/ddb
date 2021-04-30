@@ -31,5 +31,6 @@
     "StreamEnabled": true,
     "StreamViewType": "KEYS_ONLY"
   },
-  "TableName": "blah"
+  "TableName": "blah",
+  "Tags": null
 }

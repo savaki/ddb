@@ -116,7 +116,8 @@ func TestLive(t *testing.T) {
 			WithEndpoint("http://localhost:8000"))
 		api       = dynamodb.New(s)
 		tableName = fmt.Sprintf("tmp-%v", time.Now().UnixNano())
-		table     = New(api).MustTable(tableName, GetExample{})
+		client    = New(api)
+		table     = client.MustTable(tableName, GetExample{})
 		want      = GetExample{ID: "abc"}
 	)
 
@@ -138,6 +139,16 @@ func TestLive(t *testing.T) {
 
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %v; want %v", got, want)
+	}
+
+	var gotTx GetExample
+	err = client.TransactGetItems(table.Get(want.ID).ScanTx(&gotTx))
+	if err != nil {
+		t.Fatalf("got %v; want nil", err)
+	}
+
+	if !reflect.DeepEqual(gotTx, want) {
+		t.Fatalf("got %v; want %v", gotTx, want)
 	}
 }
 

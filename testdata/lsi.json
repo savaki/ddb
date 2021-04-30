@@ -52,6 +52,7 @@
   },
   "SSESpecification": null,
   "StreamSpecification": null,
-  "TableName": "blah"
+  "TableName": "blah",
+  "Tags": null
 }
 
