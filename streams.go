@@ -58,12 +58,6 @@ type Change struct {
 	// epoch time (http://www.epochconverter.com/) format.
 	ApproximateCreationDateTime EpochSeconds `json:"ApproximateCreationDateTime,omitempty"`
 
-	// IsFinalInvokeForWindow - indicates if this is the last invocation for the tumbling window. This only occurs once per window period. [Tumbling Window]
-	IsFinalInvokeForWindow bool `json:"isFinalInvokeForWindow,omitempty"`
-
-	// IsWindowTerminatedEarly - a window ends early only if the state exceeds the maximum allowed size of 1 MB [Tumbling Window]
-	IsWindowTerminatedEarly bool `json:"isWindowTerminatedEarly,omitempty"`
-
 	// Keys for dynamodb modified dynamodb item
 	Keys map[string]*dynamodb.AttributeValue `json:"Keys,omitempty"`
 
@@ -79,15 +73,9 @@ type Change struct {
 	// SizeBytes contains size of record
 	SizeBytes int64 `json:"SizeBytes"`
 
-	// State holds optional tumbling window state [Tumbling Window]
-	State json.RawMessage `json:"state,omitempty"`
-
 	// StreamViewType indicates what type of information is being held
 	// https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_StreamSpecification.html
 	StreamViewType string `json:"StreamViewType"`
-
-	// Window holds the endpoints of this window [Tumbling Window]
-	Window *Window `json:"window,omitempty"`
 }
 
 // Record holds the metadata for the dynamodb change
@@ -117,8 +105,26 @@ type Record struct {
 // github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute
 //
 type Event struct {
+	// EventSourceARN holds the arn of the resource that generated the record
+	EventSourceARN string `json:"eventSourceARN,omitempty"`
+
+	// IsFinalInvokeForWindow - indicates if this is the last invocation for the tumbling window. This only occurs once per window period. [Tumbling Window]
+	IsFinalInvokeForWindow bool `json:"isFinalInvokeForWindow,omitempty"`
+
+	// IsWindowTerminatedEarly - a window ends early only if the state exceeds the maximum allowed size of 1 MB [Tumbling Window]
+	IsWindowTerminatedEarly bool `json:"isWindowTerminatedEarly,omitempty"`
+
 	// Records contains the modified records in order
 	Records []Record `json:"Records"`
+
+	// ShardId uniquely identifies the shard
+	ShardId string `json:"shardId,omitempty"`
+
+	// State holds optional tumbling window state [Tumbling Window]
+	State json.RawMessage `json:"state,omitempty"`
+
+	// Window holds the endpoints of this window [Tumbling Window]
+	Window *Window `json:"window,omitempty"`
 }
 
 var reTableName = regexp.MustCompile(`\d{12}:table/([^/]+)/`)
