@@ -2,6 +2,7 @@ package ddb
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -42,6 +43,44 @@ func (ii *Int64Set) UnmarshalDynamoDBAttributeValue(item *dynamodb.AttributeValu
 // StringSet represents an array expressed as a set.
 // (otherwise than a List which would be the default)
 type StringSet []string
+
+// Contains returns true if want is contained in the StringSet
+func (ss StringSet) Contains(want string) bool {
+	for _, s := range ss {
+		if want == s {
+			return true
+		}
+	}
+	return false
+}
+
+// ContainsRegexp returns true if re matches any element of the Regexp
+func (ss StringSet) ContainsRegexp(re *regexp.Regexp) bool {
+	for _, s := range ss {
+		if re.MatchString(s) {
+			return true
+		}
+	}
+	return false
+}
+
+// Sub returns a new StringSet that contains the original StringSet minus
+// the elements contained in the provided StringSet
+func (ss StringSet) Sub(that StringSet) StringSet {
+	var results StringSet
+
+loop:
+	for _, s := range ss {
+		for _, t := range that {
+			if s == t {
+				continue loop
+			}
+		}
+		results = append(results, s)
+	}
+
+	return results
+}
 
 // MarshalDynamoDBAttributeValue implements Marshaler
 func (ss StringSet) MarshalDynamoDBAttributeValue(item *dynamodb.AttributeValue) error {

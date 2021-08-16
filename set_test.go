@@ -2,6 +2,7 @@ package ddb
 
 import (
 	"reflect"
+	"regexp"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
@@ -40,5 +41,25 @@ func TestStringSet(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %v; want %v", got, want)
+	}
+}
+
+func TestContains(t *testing.T) {
+	ss := StringSet{"a", "b", "c"}
+	if got := ss.Contains("a"); !got {
+		t.Fatalf("got %v; want %v", got, true)
+	}
+	if got := ss.Contains("d"); got {
+		t.Fatalf("got %v; want %v", got, false)
+	}
+}
+
+func TestContainsRegexp(t *testing.T) {
+	ss := StringSet{"a", "b", "c"}
+	if got := ss.ContainsRegexp(regexp.MustCompile(`a`)); !got {
+		t.Fatalf("got %v; want %v", got, true)
+	}
+	if got := ss.ContainsRegexp(regexp.MustCompile(`d`)); got {
+		t.Fatalf("got %v; want %v", got, false)
 	}
 }
