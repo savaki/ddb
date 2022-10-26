@@ -233,7 +233,7 @@ func (s *Scan) FirstWithContext(ctx context.Context, v interface{}) error {
 	return nil
 }
 
-// Index to scan for
+// IndexName to scan for
 func (s *Scan) IndexName(indexName string) *Scan {
 	s.indexName = indexName
 	return s
