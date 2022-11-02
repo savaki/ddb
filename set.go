@@ -64,6 +64,11 @@ func (ss StringSet) ContainsRegexp(re *regexp.Regexp) bool {
 	return false
 }
 
+// StringSlice returns StringSet as []string
+func (ss StringSet) StringSlice() []string {
+	return ss
+}
+
 // Sub returns a new StringSet that contains the original StringSet minus
 // the elements contained in the provided StringSet
 func (ss StringSet) Sub(that StringSet) StringSet {
