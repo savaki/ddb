@@ -43,6 +43,10 @@ type causer interface {
 	Cause() error
 }
 
+type coder interface {
+	Code() string
+}
+
 type wrapper interface {
 	Unwrap() error
 }
@@ -52,7 +56,7 @@ func hasError(err error, code string) bool {
 		return false
 	}
 
-	if v, ok := err.(Error); ok && v.Code() == code {
+	if v, ok := err.(coder); ok && v.Code() == code {
 		return true
 	}
 
