@@ -174,7 +174,7 @@ func (q *Query) FindAll(v interface{}) error {
 	return q.FindAllWithContext(defaultContext, v)
 }
 
-// FindAll returns all record using context provided
+// FindAllWithContext returns all record using context provided
 func (q *Query) FindAllWithContext(ctx context.Context, v interface{}) error {
 	if v == nil {
 		return nil

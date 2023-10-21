@@ -15,7 +15,10 @@
 package ddb
 
 import (
+	"encoding/hex"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 )
 
 const (
@@ -76,9 +79,12 @@ func IsInvalidFieldNameError(err error) bool {
 }
 
 type baseError struct {
-	code    string
-	message string
-	cause   error
+	code      string
+	message   string
+	cause     error
+	hashKey   *dynamodb.AttributeValue
+	rangeKey  *dynamodb.AttributeValue
+	tableName string
 }
 
 func (b *baseError) Cause() error {
@@ -96,6 +102,12 @@ func (b *baseError) Error() string {
 	return fmt.Sprintf("%v: %v: %v", b.code, b.message, b.cause.Error())
 }
 
+// Keys returns keys associated with error
+// Not available for Transact* operations
+func (b *baseError) Keys() (hashKey, rangeKey *dynamodb.AttributeValue) {
+	return b.hashKey, b.rangeKey
+}
+
 func (b *baseError) Message() string {
 	return b.message
 }
@@ -108,6 +120,43 @@ func errorf(code, message string, args ...interface{}) Error {
 	return &baseError{
 		code:    code,
 		message: fmt.Sprintf(message, args...),
+	}
+}
+
+// keyToString converts a dynamodb has or range key to string
+func keyToString(key *dynamodb.AttributeValue) string {
+	switch {
+	case key == nil:
+		return "null"
+	case key.S != nil:
+		return aws.StringValue(key.S)
+	case key.N != nil:
+		return aws.StringValue(key.N)
+	case len(key.B) > 0:
+		return hex.EncodeToString(key.B)
+	default:
+		return "null"
+	}
+}
+
+// notFoundError generates a not found error for a given table
+func notFoundError(hashKey, rangeKey *dynamodb.AttributeValue, tableName string) Error {
+	var message string
+	switch {
+	case hashKey == nil && rangeKey == nil:
+		message = "item not found"
+	case rangeKey == nil:
+		message = fmt.Sprintf("failed to find item, %v, in table, %v", keyToString(hashKey), tableName)
+	default:
+		message = fmt.Sprintf("failed to find item, %v#%v, in table, %v", keyToString(hashKey), keyToString(rangeKey), tableName)
+	}
+
+	return &baseError{
+		code:      ErrItemNotFound,
+		hashKey:   hashKey,
+		message:   message,
+		rangeKey:  rangeKey,
+		tableName: tableName,
 	}
 }
 

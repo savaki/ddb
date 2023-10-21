@@ -19,6 +19,15 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 )
 
+// getMetadata accepts the key and spec for a given table and returns the corresponding hashKey, rangeKey, and tableName
+func getMetadata(key map[string]*dynamodb.AttributeValue, spec *tableSpec) (hashKey, rangeKey *dynamodb.AttributeValue, tableName string) {
+	hashKey = key[spec.HashKey.AttributeName]
+	if spec.RangeKey != nil {
+		rangeKey = key[spec.RangeKey.AttributeName]
+	}
+	return hashKey, rangeKey, spec.TableName
+}
+
 func makeKey(spec *tableSpec, hashKey, rangeKey interface{}) (map[string]*dynamodb.AttributeValue, error) {
 	hk, err := marshal(hashKey)
 	if err != nil {

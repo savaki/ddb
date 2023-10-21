@@ -40,6 +40,10 @@ type getTx struct {
 
 func (g getTx) Decode(v *dynamodb.ItemResponse) error {
 	if len(v.Item) == 0 {
+		if tx, err := g.Tx(); err == nil {
+			hashKey, rangeKey, tableName := getMetadata(tx.Get.Key, g.get.spec)
+			return notFoundError(hashKey, rangeKey, tableName)
+		}
 		return errorf(ErrItemNotFound, "item not found")
 	}
 	return dynamodbattribute.UnmarshalMap(v.Item, g.value)
@@ -106,7 +110,8 @@ func (g *Get) ScanWithContext(ctx context.Context, v interface{}) error {
 	}
 
 	if len(output.Item) == 0 {
-		return errorf(ErrItemNotFound, "item not found")
+		hashKey, rangeKey, tableName := getMetadata(input.Key, g.spec)
+		return notFoundError(hashKey, rangeKey, tableName)
 	}
 
 	if err := dynamodbattribute.UnmarshalMap(output.Item, v); err != nil {

@@ -14,6 +14,8 @@ import (
 type Int64Set []int64
 
 // MarshalDynamoDBAttributeValue implements Marshaler
+//
+//goland:noinspection ALL
 func (ii Int64Set) MarshalDynamoDBAttributeValue(item *dynamodb.AttributeValue) error {
 	for _, i := range ii {
 		item.NS = append(item.NS, aws.String(strconv.FormatInt(i, 10)))
@@ -22,6 +24,8 @@ func (ii Int64Set) MarshalDynamoDBAttributeValue(item *dynamodb.AttributeValue) 
 }
 
 // UnmarshalDynamoDBAttributeValue implements Unmarshaler
+//
+//goland:noinspection ALL
 func (ii *Int64Set) UnmarshalDynamoDBAttributeValue(item *dynamodb.AttributeValue) error {
 	if item == nil || item.NS == nil {
 		return nil
@@ -45,6 +49,8 @@ func (ii *Int64Set) UnmarshalDynamoDBAttributeValue(item *dynamodb.AttributeValu
 type StringSet []string
 
 // Contains returns true if want is contained in the StringSet
+//
+//goland:noinspection ALL
 func (ss StringSet) Contains(want string) bool {
 	for _, s := range ss {
 		if want == s {
@@ -54,7 +60,9 @@ func (ss StringSet) Contains(want string) bool {
 	return false
 }
 
-// ContainsRegexp returns true if re matches any element of the Regexp
+// ContainsRegexp returns true if regexp matches any element of the Regexp
+//
+//goland:noinspection ALL
 func (ss StringSet) ContainsRegexp(re *regexp.Regexp) bool {
 	for _, s := range ss {
 		if re.MatchString(s) {
@@ -65,12 +73,16 @@ func (ss StringSet) ContainsRegexp(re *regexp.Regexp) bool {
 }
 
 // StringSlice returns StringSet as []string
+//
+//goland:noinspection ALL
 func (ss StringSet) StringSlice() []string {
 	return ss
 }
 
 // Sub returns a new StringSet that contains the original StringSet minus
 // the elements contained in the provided StringSet
+//
+//goland:noinspection ALL
 func (ss StringSet) Sub(that StringSet) StringSet {
 	var results StringSet
 
@@ -88,6 +100,8 @@ loop:
 }
 
 // MarshalDynamoDBAttributeValue implements Marshaler
+//
+//goland:noinspection ALL
 func (ss StringSet) MarshalDynamoDBAttributeValue(item *dynamodb.AttributeValue) error {
 	if len(ss) > 0 && item != nil {
 		item.SS = aws.StringSlice(ss)
@@ -96,6 +110,8 @@ func (ss StringSet) MarshalDynamoDBAttributeValue(item *dynamodb.AttributeValue)
 }
 
 // UnmarshalDynamoDBAttributeValue implements Unmarshaler
+//
+//goland:noinspection ALL
 func (ss *StringSet) UnmarshalDynamoDBAttributeValue(item *dynamodb.AttributeValue) error {
 	if item == nil || item.SS == nil {
 		return nil
