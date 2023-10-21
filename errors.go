@@ -34,7 +34,9 @@ type Error interface {
 	error
 	Cause() error
 	Code() string
+	Keys() (hashKey, rangeKey *dynamodb.AttributeValue)
 	Message() string
+	TableName() string
 }
 
 type causer interface {
@@ -110,6 +112,10 @@ func (b *baseError) Keys() (hashKey, rangeKey *dynamodb.AttributeValue) {
 
 func (b *baseError) Message() string {
 	return b.message
+}
+
+func (b *baseError) TableName() string {
+	return b.tableName
 }
 
 func (b *baseError) Unwrap() error {
