@@ -13,6 +13,38 @@ import (
 // (otherwise than a List which would be the default)
 type Int64Set []int64
 
+// Contains returns true if want is contained in the StringSet
+//
+//goland:noinspection ALL
+func (ii Int64Set) Contains(want int64) bool {
+	for _, i := range ii {
+		if want == i {
+			return true
+		}
+	}
+	return false
+}
+
+// Sub returns a new StringSet that contains the original StringSet minus
+// the elements contained in the provided StringSet
+//
+//goland:noinspection ALL
+func (ii Int64Set) Sub(that Int64Set) Int64Set {
+	var results Int64Set
+
+loop:
+	for _, i := range ii {
+		for _, t := range that {
+			if i == t {
+				continue loop
+			}
+		}
+		results = append(results, i)
+	}
+
+	return results
+}
+
 // MarshalDynamoDBAttributeValue implements Marshaler
 //
 //goland:noinspection ALL
