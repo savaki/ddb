@@ -13,7 +13,7 @@ import (
 // (otherwise than a List which would be the default)
 type Int64Set []int64
 
-// Contains returns true if want is contained in the StringSet
+// Contains returns true if want is contained in the Int64Set
 //
 //goland:noinspection ALL
 func (ii Int64Set) Contains(want int64) bool {
@@ -25,8 +25,8 @@ func (ii Int64Set) Contains(want int64) bool {
 	return false
 }
 
-// Sub returns a new StringSet that contains the original StringSet minus
-// the elements contained in the provided StringSet
+// Sub returns a new Int64Set that contains the original Int64Set minus
+// the elements contained in the provided Int64Set
 //
 //goland:noinspection ALL
 func (ii Int64Set) Sub(that Int64Set) Int64Set {
