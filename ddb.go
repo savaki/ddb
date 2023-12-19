@@ -126,6 +126,15 @@ func (d *DDB) MustTable(tableName string, model interface{}) *Table {
 	return table
 }
 
+// WithTokenFunc allows the generator func for dynamodb transactions to be overwritten
+func (d *DDB) WithTokenFunc(fn func() string) *DDB {
+	if fn == nil {
+		fn = makeRequestToken
+	}
+	d.tokenFunc = fn
+	return d
+}
+
 // WithTransactAttempts overrides the number of times to attempt a Transact before
 // giving up.  Defaults to 4
 func (d *DDB) WithTransactAttempts(n int) *DDB {
