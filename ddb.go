@@ -16,11 +16,9 @@ package ddb
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"math/rand"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -28,6 +26,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
+	"github.com/segmentio/ksuid"
 )
 
 const (
@@ -301,14 +300,5 @@ func getTimeout(attempt int) time.Duration {
 }
 
 func makeRequestToken() string {
-	var token [12]byte
-	r.Read(token[:])
-
-	var (
-		now = time.Now().UnixNano() / int64(time.Microsecond)
-		a   = binary.BigEndian.Uint64(token[0:8])
-		b   = binary.BigEndian.Uint32(token[8:])
-	)
-
-	return strconv.FormatInt(now, 36) + strconv.FormatUint(a, 36) + strconv.FormatUint(uint64(b), 36)
+	return ksuid.New().String()
 }
