@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 )
 
 const (
@@ -114,9 +115,20 @@ func inspect(tableName string, model interface{}) (*tableSpec, error) {
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 
-		attr, ok := getAttributeSpec(field)
+		attrName, ok := getAttrName(field)
 		if !ok {
 			continue
+		}
+
+		attrType, err := getAttrType(field, v.Field(i))
+		if err != nil {
+			return nil, err
+		}
+
+		attr := &attributeSpec{
+			FieldName:     field.Name,
+			AttributeName: attrName,
+			AttributeType: attrType,
 		}
 
 		spec.Attributes = append(spec.Attributes, attr)
@@ -197,6 +209,40 @@ func inspect(tableName string, model interface{}) (*tableSpec, error) {
 	return &spec, nil
 }
 
+func getAttrType(field reflect.StructField, value reflect.Value) (string, error) {
+	switch kind := field.Type.Kind(); kind {
+	case reflect.String:
+		return dynamodb.ScalarAttributeTypeS, nil
+	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
+		return dynamodb.ScalarAttributeTypeN, nil
+	case reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return dynamodb.ScalarAttributeTypeN, nil
+	case reflect.Bool:
+		return dynamodb.ScalarAttributeTypeB, nil
+	default:
+		// ok
+	}
+
+	if field.IsExported() {
+		if v, ok := value.Interface().(dynamodbattribute.Marshaler); ok {
+			item, err := dynamodbattribute.Marshal(v)
+			if err != nil {
+				return "", err
+			}
+			switch {
+			case item.N != nil:
+				return dynamodb.ScalarAttributeTypeN, nil
+			case item.S != nil:
+				return dynamodb.ScalarAttributeTypeS, nil
+			case item.B != nil:
+				return dynamodb.ScalarAttributeTypeB, nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("failed to determine dynamodb field for field, %v", field.Name)
+}
+
 func firstOption(tag string) string {
 	segments := strings.Split(tag, ",")
 	return strings.TrimSpace(segments[0])
@@ -211,35 +257,15 @@ func hasTagOption(tag, option string) bool {
 	return false
 }
 
-func getAttributeSpec(field reflect.StructField) (*attributeSpec, bool) {
-	var (
-		attributeName = field.Name
-		attributeType string
-	)
-
+func getAttrName(field reflect.StructField) (string, bool) {
 	if v, ok := field.Tag.Lookup("dynamodbav"); ok {
 		v = strings.TrimSpace(v)
 		if strings.HasPrefix(v, "-") {
-			return nil, false
+			return "", false
 		}
 		segments := strings.Split(v, ",")
-		attributeName = strings.TrimSpace(segments[0])
+		return strings.TrimSpace(segments[0]), true
 	}
 
-	switch kind := field.Type.Kind(); kind {
-	case reflect.String:
-		attributeType = dynamodb.ScalarAttributeTypeS
-	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
-		attributeType = dynamodb.ScalarAttributeTypeN
-	case reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		attributeType = dynamodb.ScalarAttributeTypeN
-	default:
-		attributeType = "Unknown"
-	}
-
-	return &attributeSpec{
-		FieldName:     field.Name,
-		AttributeName: attributeName,
-		AttributeType: attributeType,
-	}, true
+	return field.Name, true
 }

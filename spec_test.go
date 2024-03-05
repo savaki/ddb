@@ -15,6 +15,8 @@
 package ddb
 
 import (
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"reflect"
 	"testing"
 )
@@ -91,4 +93,40 @@ func TestInspect(t *testing.T) {
 			t.Fatalf("got %#v; want %#v", got, want)
 		}
 	})
+}
+
+type Key struct {
+	S string
+}
+
+func (k Key) MarshalDynamoDBAttributeValue(item *dynamodb.AttributeValue) error {
+	item.S = aws.String(k.S)
+	return nil
+}
+
+func (k *Key) UnmarshalDynamoDBAttributeValue(item *dynamodb.AttributeValue) error {
+	*k = Key{S: aws.StringValue(item.S)}
+	return nil
+}
+
+type Custom struct {
+	Key Key `ddb:"hash" dynamodbav:"pk"`
+}
+
+func TestInspectCustomMarshal(t *testing.T) {
+	spec, err := inspect("custom", Custom{})
+	if err != nil {
+		t.Fatalf("got %v; want nil", err)
+	}
+
+	want := &keySpec{
+		AttributeName: "pk",
+		AttributeType: "S",
+	}
+	if got := spec.HashKey; !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %#v; want %#v", got, want)
+	}
+	if spec.RangeKey != nil {
+		t.Fatalf("got %v; want nil", spec.RangeKey)
+	}
 }
