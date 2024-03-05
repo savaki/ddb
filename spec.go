@@ -240,7 +240,7 @@ func getAttrType(field reflect.StructField, value reflect.Value) (string, error)
 		}
 	}
 
-	return "", fmt.Errorf("failed to determine dynamodb field for field, %v", field.Name)
+	return "Unknown", nil
 }
 
 func firstOption(tag string) string {
