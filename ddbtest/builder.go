@@ -71,7 +71,7 @@ func (b *EventBuilder) Remove(oldItem interface{}) *EventBuilder {
 
 		return ddb.Record{
 			Change: ddb.Change{
-				NewImage: oldImage,
+				OldImage: oldImage,
 			},
 			EventName: dynamodbstreams.OperationTypeRemove,
 		}, nil
