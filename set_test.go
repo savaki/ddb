@@ -26,6 +26,28 @@ func TestInt64Set(t *testing.T) {
 	}
 }
 
+func TestInt64SetContains(t *testing.T) {
+	ii := Int64Set{1, 2, 3}
+	if got := ii.Contains(1); !got {
+		t.Fatalf("got %v; want %v", got, true)
+	}
+	if got := ii.Contains(4); got {
+		t.Fatalf("got %v; want %v", got, false)
+	}
+}
+
+func TestInt64SetSub(t *testing.T) {
+	ii := Int64Set{1, 2, 3, 4}
+	if got := ii.Contains(1); !got {
+		t.Fatalf("got %v; want %v", got, true)
+	}
+
+	updated := ii.Sub(Int64Set{1})
+	if got := updated.Contains(1); got {
+		t.Fatalf("got %v; want %v", got, false)
+	}
+}
+
 func TestStringSet(t *testing.T) {
 	want := StringSet{"a", "b", "c"}
 
