@@ -17,6 +17,7 @@ package ddb
 import (
 	"encoding/hex"
 	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 )
@@ -82,6 +83,10 @@ func IsMismatchedValueCountError(err error) bool {
 
 func IsInvalidFieldNameError(err error) bool {
 	return hasError(err, ErrInvalidFieldName)
+}
+
+func IsConditionViolatedError(err error) bool {
+	return hasError(err, dynamodb.ErrCodeConditionalCheckFailedException)
 }
 
 type baseError struct {
