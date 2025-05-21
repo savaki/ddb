@@ -85,7 +85,7 @@ func IsInvalidFieldNameError(err error) bool {
 	return hasError(err, ErrInvalidFieldName)
 }
 
-func IsConditionViolatedError(err error) bool {
+func IsConditionalCheckFailedException(err error) bool {
 	return hasError(err, dynamodb.ErrCodeConditionalCheckFailedException)
 }
 
