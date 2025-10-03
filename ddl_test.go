@@ -25,11 +25,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 type Sample struct {
@@ -77,7 +77,7 @@ func Test_makeCreateTableInput(t *testing.T) {
 
 	t.Run("pay per request", func(t *testing.T) {
 		got := makeCreateTableInput(tableName, spec,
-			WithBillingMode(dynamodb.BillingModePayPerRequest),
+			WithBillingMode(string(types.BillingModePayPerRequest)),
 		)
 		assertEqual(t, got, "testdata/pay_per_request.json")
 	})
@@ -94,7 +94,7 @@ func Test_makeCreateTableInput(t *testing.T) {
 
 	t.Run("stream specification", func(t *testing.T) {
 		got := makeCreateTableInput(tableName, spec,
-			WithStreamSpecification(dynamodb.StreamViewTypeKeysOnly),
+			WithStreamSpecification(string(types.StreamViewTypeKeysOnly)),
 		)
 		assertEqual(t, got, "testdata/stream_specification.json")
 	})
@@ -186,7 +186,7 @@ func TestCreateTable(t *testing.T) {
 
 	t.Run("table already exists", func(t *testing.T) {
 		mock := &Mock{
-			err: awserr.New(dynamodb.ErrCodeResourceInUseException, "boom", nil),
+			err: &types.ResourceInUseException{Message: aws.String("boom")},
 		}
 		table := New(mock).MustTable(tableName, Example{})
 		err := table.CreateTableIfNotExists(ctx)
@@ -213,7 +213,7 @@ func TestDeleteTable(t *testing.T) {
 
 	t.Run("table already exists", func(t *testing.T) {
 		mock := &Mock{
-			err: awserr.New(dynamodb.ErrCodeResourceNotFoundException, "boom", nil),
+			err: &types.ResourceNotFoundException{Message: aws.String("boom")},
 		}
 		table := New(mock).MustTable(tableName, Example{})
 		err := table.DeleteTableIfExists(ctx)
@@ -224,7 +224,7 @@ func TestDeleteTable(t *testing.T) {
 
 	t.Run("other error", func(t *testing.T) {
 		mock := &Mock{
-			err: awserr.New(dynamodb.ErrCodeConditionalCheckFailedException, "boom", nil),
+			err: &types.ConditionalCheckFailedException{Message: aws.String("boom")},
 		}
 		table := New(mock).MustTable(tableName, Example{})
 		err := table.DeleteTableIfExists(ctx)
@@ -239,11 +239,18 @@ func TestTable_CreateTableIfNotExists_Live(t *testing.T) {
 		t.SkipNow()
 	}
 
-	s := session.Must(session.NewSession(aws.NewConfig().
-		WithCredentials(credentials.NewStaticCredentials("blah", "blah", "")).
-		WithEndpoint("http://localhost:8000").
-		WithRegion("us-west-2")))
-	api := dynamodb.New(s)
+	cfg, err := config.LoadDefaultConfig(context.Background(),
+		config.WithRegion("us-west-2"),
+		config.WithEndpointResolverWithOptions(aws.EndpointResolverWithOptionsFunc(
+			func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+				return aws.Endpoint{URL: "http://localhost:8000"}, nil
+			})),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("blah", "blah", "")),
+	)
+	if err != nil {
+		t.Fatalf("failed to load config: %v", err)
+	}
+	api := dynamodb.NewFromConfig(cfg)
 	ctx := context.Background()
 
 	t.Run("gsi - pay per request", func(t *testing.T) {
@@ -255,7 +262,7 @@ func TestTable_CreateTableIfNotExists_Live(t *testing.T) {
 		tableName := fmt.Sprintf("gsi-payper-%v", time.Now().UnixNano())
 		table := New(api).MustTable(tableName, GSI{})
 
-		err := table.CreateTableIfNotExists(ctx, WithBillingMode(dynamodb.BillingModePayPerRequest))
+		err := table.CreateTableIfNotExists(ctx, WithBillingMode(string(types.BillingModePayPerRequest)))
 		if err != nil {
 			t.Fatalf("got %v; want nil", err)
 		}

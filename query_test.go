@@ -21,19 +21,28 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 func withTable(t *testing.T, schema interface{}, callback func(ctx context.Context, table *Table)) {
+	cfg, err := config.LoadDefaultConfig(context.Background(),
+		config.WithRegion("us-west-2"),
+		config.WithEndpointResolverWithOptions(aws.EndpointResolverWithOptionsFunc(
+			func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+				return aws.Endpoint{URL: "http://localhost:8000"}, nil
+			})),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("blah", "blah", "")),
+	)
+	if err != nil {
+		t.Fatalf("failed to load config: %v", err)
+	}
+
 	var (
-		s = session.Must(session.NewSession(aws.NewConfig().
-			WithCredentials(credentials.NewStaticCredentials("blah", "blah", "")).
-			WithEndpoint("http://localhost:8000").
-			WithRegion("us-west-2")))
-		api       = dynamodb.New(s)
+		api       = dynamodb.NewFromConfig(cfg)
 		client    = New(api)
 		tableName = fmt.Sprintf("table-%v", time.Now().UnixNano())
 		table     = client.MustTable(tableName, schema)
@@ -43,8 +52,7 @@ func withTable(t *testing.T, schema interface{}, callback func(ctx context.Conte
 	defer cancel()
 
 	// appointment
-	err := table.CreateTableIfNotExists(ctx)
-	if err != nil {
+	if err := table.CreateTableIfNotExists(ctx); err != nil {
 		t.Fatalf("got %v; want nil", err)
 	}
 	defer table.DeleteTableIfExists(ctx)
@@ -236,7 +244,7 @@ func TestQuery_EachWithContext(t *testing.T) {
 			}
 		}
 
-		findAll := func(query *Query) (int, map[string]*dynamodb.AttributeValue, string, error) {
+		findAll := func(query *Query) (int, map[string]types.AttributeValue, string, error) {
 			var records []Record
 			callback := func(item Item) (bool, error) {
 				var r Record
@@ -247,7 +255,7 @@ func TestQuery_EachWithContext(t *testing.T) {
 				return true, nil
 			}
 
-			var lastEvaluatedKey map[string]*dynamodb.AttributeValue
+			var lastEvaluatedKey map[string]types.AttributeValue
 			var lastToken string
 			query = query.
 				LastEvaluatedKey(&lastEvaluatedKey).

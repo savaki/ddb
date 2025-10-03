@@ -22,10 +22,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
 type GetExample struct {
@@ -109,19 +109,28 @@ func TestLive(t *testing.T) {
 	}
 
 	var (
-		ctx  = context.Background()
-		s, _ = session.NewSession(aws.NewConfig().
-			WithCredentials(credentials.NewStaticCredentials("blah", "blah", "")).
-			WithRegion("us-west-2").
-			WithEndpoint("http://localhost:8000"))
-		api       = dynamodb.New(s)
+		ctx = context.Background()
+	)
+	cfg, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion("us-west-2"),
+		config.WithEndpointResolverWithOptions(aws.EndpointResolverWithOptionsFunc(
+			func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+				return aws.Endpoint{URL: "http://localhost:8000"}, nil
+			})),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("blah", "blah", "")),
+	)
+	if err != nil {
+		t.Fatalf("failed to load config: %v", err)
+	}
+	var (
+		api       = dynamodb.NewFromConfig(cfg)
 		tableName = fmt.Sprintf("tmp-%v", time.Now().UnixNano())
 		client    = New(api)
 		table     = client.MustTable(tableName, GetExample{})
 		want      = GetExample{ID: "abc"}
 	)
 
-	err := table.CreateTableIfNotExists(ctx)
+	err = table.CreateTableIfNotExists(ctx)
 	if err != nil {
 		t.Fatalf("got %v; want nil", err)
 	}
