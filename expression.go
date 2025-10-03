@@ -20,14 +20,13 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 type expression struct {
 	attributes []*attributeSpec
-	Names      map[string]*string
-	Values     map[string]*dynamodb.AttributeValue
+	Names      map[string]string
+	Values     map[string]types.AttributeValue
 	index      int64
 
 	Adds       *strings.Builder
@@ -46,12 +45,12 @@ func newExpression(attributes ...*attributeSpec) *expression {
 
 func (e *expression) addExpressionAttributeName(name string) string {
 	if e.Names == nil {
-		e.Names = map[string]*string{}
+		e.Names = map[string]string{}
 	}
 
 	// use existing attribute name where possible
 	for k, v := range e.Names {
-		if *v == name {
+		if v == name {
 			return k
 		}
 	}
@@ -60,18 +59,18 @@ func (e *expression) addExpressionAttributeName(name string) string {
 	for _, attr := range e.attributes {
 		switch name {
 		case attr.AttributeName, attr.FieldName:
-			e.Names[key] = aws.String(attr.AttributeName)
+			e.Names[key] = attr.AttributeName
 			return key
 		}
 	}
 
-	e.Names[key] = aws.String(name)
+	e.Names[key] = name
 	return key
 }
 
-func (e *expression) addExpressionAttributeValue(item *dynamodb.AttributeValue) string {
+func (e *expression) addExpressionAttributeValue(item types.AttributeValue) string {
 	if e.Values == nil {
-		e.Values = map[string]*dynamodb.AttributeValue{}
+		e.Values = map[string]types.AttributeValue{}
 	}
 
 	id := atomic.AddInt64(&e.index, 1)
@@ -124,7 +123,8 @@ func (e *expression) UpdateExpression() *string {
 	}
 
 	expr := buf.String()
-	return aws.String(expr[0 : len(expr)-1])
+	result := expr[0 : len(expr)-1]
+	return &result
 }
 
 func (e *expression) ConditionExpression() *string {
@@ -132,7 +132,8 @@ func (e *expression) ConditionExpression() *string {
 		return nil
 	}
 
-	return aws.String(e.Conditions.String())
+	result := e.Conditions.String()
+	return &result
 }
 
 func (e *expression) FilterExpression() *string {
@@ -140,7 +141,8 @@ func (e *expression) FilterExpression() *string {
 		return nil
 	}
 
-	return aws.String(e.Filters.String())
+	result := e.Filters.String()
+	return &result
 }
 
 func (e *expression) append(buf *strings.Builder, keyword, separator, expr string, values ...interface{}) error {

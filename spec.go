@@ -19,8 +19,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 const (
@@ -212,30 +212,30 @@ func inspect(tableName string, model interface{}) (*tableSpec, error) {
 func getAttrType(field reflect.StructField, value reflect.Value) (string, error) {
 	switch kind := field.Type.Kind(); kind {
 	case reflect.String:
-		return dynamodb.ScalarAttributeTypeS, nil
+		return string(types.ScalarAttributeTypeS), nil
 	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64:
-		return dynamodb.ScalarAttributeTypeN, nil
+		return string(types.ScalarAttributeTypeN), nil
 	case reflect.Uint, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return dynamodb.ScalarAttributeTypeN, nil
+		return string(types.ScalarAttributeTypeN), nil
 	case reflect.Bool:
-		return dynamodb.ScalarAttributeTypeB, nil
+		return string(types.ScalarAttributeTypeB), nil
 	default:
 		// ok
 	}
 
 	if field.IsExported() {
-		if v, ok := value.Interface().(dynamodbattribute.Marshaler); ok {
-			item, err := dynamodbattribute.Marshal(v)
+		if v, ok := value.Interface().(attributevalue.Marshaler); ok {
+			item, err := attributevalue.Marshal(v)
 			if err != nil {
 				return "", err
 			}
-			switch {
-			case item.N != nil:
-				return dynamodb.ScalarAttributeTypeN, nil
-			case item.S != nil:
-				return dynamodb.ScalarAttributeTypeS, nil
-			case item.B != nil:
-				return dynamodb.ScalarAttributeTypeB, nil
+			switch item.(type) {
+			case *types.AttributeValueMemberN:
+				return string(types.ScalarAttributeTypeN), nil
+			case *types.AttributeValueMemberS:
+				return string(types.ScalarAttributeTypeS), nil
+			case *types.AttributeValueMemberB:
+				return string(types.ScalarAttributeTypeB), nil
 			}
 		}
 	}

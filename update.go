@@ -18,15 +18,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 // Update encapsulates the UpdateItem action
 type Update struct {
-	api                                 dynamodbiface.DynamoDBAPI
+	api                                 DynamoDBAPI
 	spec                                *tableSpec
 	hashKey                             interface{}
 	rangeKey                            interface{}
@@ -37,18 +36,18 @@ type Update struct {
 	expr                                *expression
 	newValues                           interface{}
 	oldValues                           interface{}
-	returnValuesOnConditionCheckFailure string
+	returnValuesOnConditionCheckFailure types.ReturnValuesOnConditionCheckFailure
 }
 
-func (u *Update) returnValues() (string, error) {
+func (u *Update) returnValues() (types.ReturnValue, error) {
 	if u.newValues == nil && u.oldValues == nil {
-		return dynamodb.ReturnValueNone, nil
+		return types.ReturnValueNone, nil
 	} else if u.newValues != nil && u.oldValues != nil {
 		return "", fmt.Errorf("either NewValues or OldValues may be specified, but not both")
 	} else if u.newValues != nil {
-		return dynamodb.ReturnValueAllNew, nil
+		return types.ReturnValueAllNew, nil
 	} else {
-		return dynamodb.ReturnValueAllOld, nil
+		return types.ReturnValueAllOld, nil
 	}
 }
 
@@ -85,15 +84,15 @@ func (u *Update) Delete(expr string, values ...interface{}) *Update {
 	return u
 }
 
-// Tx returns *dynamodb.TransactWriteItem suitable for use in a transaction
-func (u *Update) Tx() (*dynamodb.TransactWriteItem, error) {
+// Tx returns *types.TransactWriteItem suitable for use in a transaction
+func (u *Update) Tx() (*types.TransactWriteItem, error) {
 	input, err := u.UpdateItemInput()
 	if err != nil {
 		return nil, err
 	}
 
-	writeItem := dynamodb.TransactWriteItem{
-		Update: &dynamodb.Update{
+	writeItem := types.TransactWriteItem{
+		Update: &types.Update{
 			ConditionExpression:       input.ConditionExpression,
 			ExpressionAttributeNames:  input.ExpressionAttributeNames,
 			ExpressionAttributeValues: input.ExpressionAttributeValues,
@@ -103,7 +102,7 @@ func (u *Update) Tx() (*dynamodb.TransactWriteItem, error) {
 		},
 	}
 	if v := u.returnValuesOnConditionCheckFailure; v != "" {
-		writeItem.Update.ReturnValuesOnConditionCheckFailure = aws.String(v)
+		writeItem.Update.ReturnValuesOnConditionCheckFailure = v
 	}
 
 	return &writeItem, nil
@@ -137,7 +136,7 @@ func (u *Update) Remove(expr string, values ...interface{}) *Update {
 	return u
 }
 
-func (u *Update) ReturnValuesOnConditionCheckFailure(value string) *Update {
+func (u *Update) ReturnValuesOnConditionCheckFailure(value types.ReturnValuesOnConditionCheckFailure) *Update {
 	u.returnValuesOnConditionCheckFailure = value
 	return u
 }
@@ -153,18 +152,18 @@ func (u *Update) RunWithContext(ctx context.Context) error {
 		return err
 	}
 
-	output, err := u.api.UpdateItemWithContext(ctx, input)
+	output, err := u.api.UpdateItem(ctx, input)
 	if err != nil {
 		return err
 	}
 
 	if m := output.Attributes; m != nil {
 		if u.oldValues != nil {
-			if err := dynamodbattribute.UnmarshalMap(m, u.oldValues); err != nil {
+			if err := attributevalue.UnmarshalMap(m, u.oldValues); err != nil {
 				return fmt.Errorf("update unable to unmarshal old values: %v", err)
 			}
 		} else if u.newValues != nil {
-			if err := dynamodbattribute.UnmarshalMap(m, u.newValues); err != nil {
+			if err := attributevalue.UnmarshalMap(m, u.newValues); err != nil {
 				return fmt.Errorf("update unable to unmarshal new values: %v", err)
 			}
 		}
@@ -210,14 +209,15 @@ func (u *Update) UpdateItemInput() (*dynamodb.UpdateItemInput, error) {
 		updateExpression    = u.expr.UpdateExpression()
 	)
 
+	tableName := u.spec.TableName
 	return &dynamodb.UpdateItemInput{
 		ConditionExpression:       conditionExpression,
 		ExpressionAttributeNames:  u.expr.Names,
 		ExpressionAttributeValues: u.expr.Values,
 		Key:                       key,
-		ReturnConsumedCapacity:    aws.String(dynamodb.ReturnConsumedCapacityTotal),
-		ReturnValues:              aws.String(returnValues),
-		TableName:                 aws.String(u.spec.TableName),
+		ReturnConsumedCapacity:    types.ReturnConsumedCapacityTotal,
+		ReturnValues:              returnValues,
+		TableName:                 &tableName,
 		UpdateExpression:          updateExpression,
 	}, nil
 }

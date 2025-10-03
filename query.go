@@ -21,21 +21,20 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 type Query struct {
-	api                dynamodbiface.DynamoDBAPI
+	api                DynamoDBAPI
 	spec               *tableSpec
 	consistentRead     bool
-	lastEvaluatedKey   *map[string]*dynamodb.AttributeValue
+	lastEvaluatedKey   *map[string]types.AttributeValue
 	lastEvaluatedToken *string
 	limit              int64
 	selectAttributes   string
 	scanIndexForward   bool
-	startKey           map[string]*dynamodb.AttributeValue
+	startKey           map[string]types.AttributeValue
 	request            *ConsumedCapacity
 	table              *ConsumedCapacity
 	err                error
@@ -102,7 +101,7 @@ func (q *Query) EachWithContext(ctx context.Context, fn func(item Item) (bool, e
 	for {
 		input.ExclusiveStartKey = startKey
 
-		output, err := q.api.QueryWithContext(ctx, input)
+		output, err := q.api.Query(ctx, input)
 		if err != nil {
 			return err
 		}
@@ -246,30 +245,32 @@ func (q *Query) QueryInput() (*dynamodb.QueryInput, error) {
 
 	var indexName *string
 	if q.indexName != "" {
-		indexName = aws.String(q.indexName)
+		indexName = &q.indexName
 	}
 
 	if q.selectAttributes == "" {
-		q.selectAttributes = dynamodb.SelectAllAttributes
+		q.selectAttributes = string(types.SelectAllAttributes)
 	}
 
+	tableName := q.spec.TableName
 	conditionExpression := q.expr.ConditionExpression()
 	filterExpression := q.expr.FilterExpression()
 	input := dynamodb.QueryInput{
-		ConsistentRead:            aws.Bool(q.consistentRead),
+		ConsistentRead:            &q.consistentRead,
 		ExclusiveStartKey:         q.startKey,
 		ExpressionAttributeNames:  q.expr.Names,
 		ExpressionAttributeValues: q.expr.Values,
 		FilterExpression:          filterExpression,
 		IndexName:                 indexName,
 		KeyConditionExpression:    conditionExpression,
-		ReturnConsumedCapacity:    aws.String(dynamodb.ReturnConsumedCapacityTotal),
-		ScanIndexForward:          aws.Bool(q.scanIndexForward),
-		Select:                    aws.String(q.selectAttributes),
-		TableName:                 aws.String(q.spec.TableName),
+		ReturnConsumedCapacity:    types.ReturnConsumedCapacityTotal,
+		ScanIndexForward:          &q.scanIndexForward,
+		Select:                    types.Select(q.selectAttributes),
+		TableName:                 &tableName,
 	}
 	if q.limit > 0 {
-		input.Limit = aws.Int64(q.limit)
+		limit := int32(q.limit)
+		input.Limit = &limit
 	}
 	return &input, nil
 }
@@ -281,7 +282,7 @@ func (q *Query) Select(s string) *Query {
 }
 
 // LastEvaluatedKey stores the last evaluated key into the provided value
-func (q *Query) LastEvaluatedKey(lastEvaluatedKey *map[string]*dynamodb.AttributeValue) *Query {
+func (q *Query) LastEvaluatedKey(lastEvaluatedKey *map[string]types.AttributeValue) *Query {
 	q.lastEvaluatedKey = lastEvaluatedKey
 	return q
 }
@@ -300,7 +301,7 @@ func (q *Query) ScanIndexForward(enabled bool) *Query {
 }
 
 // StartKey assigns the continuation key used for query pagination
-func (q *Query) StartKey(startKey map[string]*dynamodb.AttributeValue) *Query {
+func (q *Query) StartKey(startKey map[string]types.AttributeValue) *Query {
 	q.startKey = startKey
 	return q
 }
@@ -317,7 +318,7 @@ func (q *Query) StartToken(token string) *Query {
 		return q
 	}
 
-	var startKey map[string]*dynamodb.AttributeValue
+	var startKey map[string]types.AttributeValue
 	if err := json.Unmarshal(data, &startKey); err != nil {
 		q.err = fmt.Errorf("failed to json decode start token:% w", err)
 		return q

@@ -17,14 +17,18 @@ package ddb
 import (
 	"context"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
+// GetAPI defines the interface for Get operations
+type GetAPI interface {
+	GetItem(ctx context.Context, params *dynamodb.GetItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error)
+}
+
 type Get struct {
-	api            dynamodbiface.DynamoDBAPI
+	api            GetAPI
 	spec           *tableSpec
 	hashKey        interface{}
 	rangeKey       interface{}
@@ -38,7 +42,7 @@ type getTx struct {
 	value interface{}
 }
 
-func (g getTx) Decode(v *dynamodb.ItemResponse) error {
+func (g getTx) Decode(v *types.ItemResponse) error {
 	if len(v.Item) == 0 {
 		if tx, err := g.Tx(); err == nil {
 			hashKey, rangeKey, tableName := getMetadata(tx.Get.Key, g.get.spec)
@@ -46,19 +50,20 @@ func (g getTx) Decode(v *dynamodb.ItemResponse) error {
 		}
 		return errorf(ErrItemNotFound, "item not found")
 	}
-	return dynamodbattribute.UnmarshalMap(v.Item, g.value)
+	return attributevalue.UnmarshalMap(v.Item, g.value)
 }
 
-func (g getTx) Tx() (*dynamodb.TransactGetItem, error) {
+func (g getTx) Tx() (*types.TransactGetItem, error) {
 	key, err := makeKey(g.get.spec, g.get.hashKey, g.get.rangeKey)
 	if err != nil {
 		return nil, err
 	}
 
-	return &dynamodb.TransactGetItem{
-		Get: &dynamodb.Get{
+	tableName := g.get.spec.TableName
+	return &types.TransactGetItem{
+		Get: &types.Get{
 			Key:       key,
-			TableName: aws.String(g.get.spec.TableName),
+			TableName: &tableName,
 		},
 	}, nil
 }
@@ -80,11 +85,12 @@ func (g *Get) GetItemInput() (*dynamodb.GetItemInput, error) {
 		return nil, err
 	}
 
+	tableName := g.spec.TableName
 	return &dynamodb.GetItemInput{
-		ConsistentRead:         aws.Bool(g.consistentRead),
+		ConsistentRead:         &g.consistentRead,
 		Key:                    key,
-		TableName:              aws.String(g.spec.TableName),
-		ReturnConsumedCapacity: aws.String(dynamodb.ReturnConsumedCapacityTotal),
+		TableName:              &tableName,
+		ReturnConsumedCapacity: types.ReturnConsumedCapacityTotal,
 	}, nil
 }
 
@@ -99,7 +105,7 @@ func (g *Get) ScanWithContext(ctx context.Context, v interface{}) error {
 		return err
 	}
 
-	output, err := g.api.GetItemWithContext(ctx, input)
+	output, err := g.api.GetItem(ctx, input)
 	if err != nil {
 		return err
 	}
@@ -114,7 +120,7 @@ func (g *Get) ScanWithContext(ctx context.Context, v interface{}) error {
 		return notFoundError(hashKey, rangeKey, tableName)
 	}
 
-	if err := dynamodbattribute.UnmarshalMap(output.Item, v); err != nil {
+	if err := attributevalue.UnmarshalMap(output.Item, v); err != nil {
 		return err
 	}
 

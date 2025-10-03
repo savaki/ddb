@@ -17,13 +17,12 @@ package ddb
 import (
 	"context"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 type Delete struct {
-	api                                 dynamodbiface.DynamoDBAPI
+	api                                 DynamoDBAPI
 	spec                                *tableSpec
 	hashKey                             interface{}
 	rangeKey                            interface{}
@@ -31,7 +30,7 @@ type Delete struct {
 	request                             *ConsumedCapacity
 	err                                 error
 	expr                                *expression
-	returnValuesOnConditionCheckFailure string
+	returnValuesOnConditionCheckFailure types.ReturnValuesOnConditionCheckFailure
 }
 
 func (d *Delete) Condition(expr string, values ...interface{}) *Delete {
@@ -58,14 +57,15 @@ func (d *Delete) DeleteItemInput() (*dynamodb.DeleteItemInput, error) {
 		return nil, err
 	}
 
+	tableName := d.spec.TableName
 	conditionExpression := d.expr.ConditionExpression()
 	return &dynamodb.DeleteItemInput{
 		ConditionExpression:       conditionExpression,
 		ExpressionAttributeNames:  d.expr.Names,
 		ExpressionAttributeValues: d.expr.Values,
 		Key:                       key,
-		ReturnConsumedCapacity:    aws.String(dynamodb.ReturnConsumedCapacityTotal),
-		TableName:                 aws.String(d.spec.TableName),
+		ReturnConsumedCapacity:    types.ReturnConsumedCapacityTotal,
+		TableName:                 &tableName,
 	}, nil
 }
 
@@ -74,7 +74,7 @@ func (d *Delete) DeleteItemInput() (*dynamodb.DeleteItemInput, error) {
 // values are: NONE and ALL_OLD.
 //
 // Only used by Tx()
-func (d *Delete) ReturnValuesOnConditionCheckFailure(value string) *Delete {
+func (d *Delete) ReturnValuesOnConditionCheckFailure(value types.ReturnValuesOnConditionCheckFailure) *Delete {
 	d.returnValuesOnConditionCheckFailure = value
 	return d
 }
@@ -90,7 +90,7 @@ func (d *Delete) RunWithContext(ctx context.Context) error {
 		return err
 	}
 
-	output, err := d.api.DeleteItemWithContext(ctx, input)
+	output, err := d.api.DeleteItem(ctx, input)
 	if err != nil {
 		return err
 	}
@@ -107,14 +107,14 @@ func (d *Delete) Run() error {
 	return d.RunWithContext(defaultContext)
 }
 
-func (d *Delete) Tx() (*dynamodb.TransactWriteItem, error) {
+func (d *Delete) Tx() (*types.TransactWriteItem, error) {
 	input, err := d.DeleteItemInput()
 	if err != nil {
 		return nil, err
 	}
 
-	writeItem := dynamodb.TransactWriteItem{
-		Delete: &dynamodb.Delete{
+	writeItem := types.TransactWriteItem{
+		Delete: &types.Delete{
 			ConditionExpression:       input.ConditionExpression,
 			ExpressionAttributeNames:  input.ExpressionAttributeNames,
 			ExpressionAttributeValues: input.ExpressionAttributeValues,
@@ -123,7 +123,7 @@ func (d *Delete) Tx() (*dynamodb.TransactWriteItem, error) {
 		},
 	}
 	if v := d.returnValuesOnConditionCheckFailure; v != "" {
-		writeItem.Delete.ReturnValuesOnConditionCheckFailure = aws.String(v)
+		writeItem.Delete.ReturnValuesOnConditionCheckFailure = v
 	}
 
 	return &writeItem, nil

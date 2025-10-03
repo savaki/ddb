@@ -15,12 +15,12 @@
 package ddb
 
 import (
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 // getMetadata accepts the key and spec for a given table and returns the corresponding hashKey, rangeKey, and tableName
-func getMetadata(key map[string]*dynamodb.AttributeValue, spec *tableSpec) (hashKey, rangeKey *dynamodb.AttributeValue, tableName string) {
+func getMetadata(key map[string]types.AttributeValue, spec *tableSpec) (hashKey, rangeKey types.AttributeValue, tableName string) {
 	hashKey = key[spec.HashKey.AttributeName]
 	if spec.RangeKey != nil {
 		rangeKey = key[spec.RangeKey.AttributeName]
@@ -28,7 +28,7 @@ func getMetadata(key map[string]*dynamodb.AttributeValue, spec *tableSpec) (hash
 	return hashKey, rangeKey, spec.TableName
 }
 
-func makeKey(spec *tableSpec, hashKey, rangeKey interface{}) (map[string]*dynamodb.AttributeValue, error) {
+func makeKey(spec *tableSpec, hashKey, rangeKey interface{}) (map[string]types.AttributeValue, error) {
 	hk, err := marshal(hashKey)
 	if err != nil {
 		return nil, wrapf(err, ErrUnableToMarshalItem, "unable to encode hash key, %v", hashKey)
@@ -39,7 +39,7 @@ func makeKey(spec *tableSpec, hashKey, rangeKey interface{}) (map[string]*dynamo
 		return nil, wrapf(err, ErrUnableToMarshalItem, "unable to encode range key, %v", rangeKey)
 	}
 
-	keys := map[string]*dynamodb.AttributeValue{}
+	keys := map[string]types.AttributeValue{}
 	if key := spec.HashKey; key != nil {
 		keys[key.AttributeName] = hk
 	}
@@ -50,24 +50,24 @@ func makeKey(spec *tableSpec, hashKey, rangeKey interface{}) (map[string]*dynamo
 	return keys, nil
 }
 
-func marshal(item interface{}) (*dynamodb.AttributeValue, error) {
+func marshal(item interface{}) (types.AttributeValue, error) {
 	switch v := item.(type) {
-	case *dynamodb.AttributeValue:
+	case types.AttributeValue:
 		return v, nil
-	case map[string]*dynamodb.AttributeValue:
-		return &dynamodb.AttributeValue{M: v}, nil
-	case []*dynamodb.AttributeValue:
-		return &dynamodb.AttributeValue{L: v}, nil
+	case map[string]types.AttributeValue:
+		return &types.AttributeValueMemberM{Value: v}, nil
+	case []types.AttributeValue:
+		return &types.AttributeValueMemberL{Value: v}, nil
 	default:
-		return dynamodbattribute.Marshal(item)
+		return attributevalue.Marshal(item)
 	}
 }
 
-func marshalMap(item interface{}) (map[string]*dynamodb.AttributeValue, error) {
+func marshalMap(item interface{}) (map[string]types.AttributeValue, error) {
 	switch v := item.(type) {
-	case map[string]*dynamodb.AttributeValue:
+	case map[string]types.AttributeValue:
 		return v, nil
 	default:
-		return dynamodbattribute.MarshalMap(item)
+		return attributevalue.MarshalMap(item)
 	}
 }

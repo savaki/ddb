@@ -17,20 +17,24 @@ package ddb
 import (
 	"context"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
+// PutAPI defines the interface for Put operations
+type PutAPI interface {
+	PutItem(ctx context.Context, params *dynamodb.PutItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error)
+}
+
 type Put struct {
-	api                                 dynamodbiface.DynamoDBAPI
+	api                                 PutAPI
 	spec                                *tableSpec
 	value                               interface{}
 	request                             *ConsumedCapacity
 	table                               *ConsumedCapacity
 	err                                 error
 	expr                                *expression
-	returnValuesOnConditionCheckFailure string
+	returnValuesOnConditionCheckFailure types.ReturnValuesOnConditionCheckFailure
 }
 
 func (p *Put) Condition(expr string, values ...interface{}) *Put {
@@ -57,21 +61,22 @@ func (p *Put) PutItemInput() (*dynamodb.PutItemInput, error) {
 		return nil, err
 	}
 
+	tableName := p.spec.TableName
 	input := dynamodb.PutItemInput{
 		ConditionExpression:       p.expr.ConditionExpression(),
 		Item:                      item,
 		ExpressionAttributeNames:  p.expr.Names,
 		ExpressionAttributeValues: p.expr.Values,
-		TableName:                 aws.String(p.spec.TableName),
+		TableName:                 &tableName,
 	}
 	if p.request != nil {
-		input.ReturnConsumedCapacity = aws.String(dynamodb.ReturnConsumedCapacityTotal)
+		input.ReturnConsumedCapacity = types.ReturnConsumedCapacityTotal
 	}
 
 	return &input, nil
 }
 
-func (p *Put) ReturnValuesOnConditionCheckFailure(value string) *Put {
+func (p *Put) ReturnValuesOnConditionCheckFailure(value types.ReturnValuesOnConditionCheckFailure) *Put {
 	p.returnValuesOnConditionCheckFailure = value
 	return p
 }
@@ -82,7 +87,7 @@ func (p *Put) RunWithContext(ctx context.Context) error {
 		return err
 	}
 
-	output, err := p.api.PutItemWithContext(ctx, input)
+	output, err := p.api.PutItem(ctx, input)
 	if err != nil {
 		return err
 	}
@@ -99,14 +104,14 @@ func (p *Put) Run() error {
 	return p.RunWithContext(defaultContext)
 }
 
-func (p *Put) Tx() (*dynamodb.TransactWriteItem, error) {
+func (p *Put) Tx() (*types.TransactWriteItem, error) {
 	input, err := p.PutItemInput()
 	if err != nil {
 		return nil, err
 	}
 
-	writeItem := dynamodb.TransactWriteItem{
-		Put: &dynamodb.Put{
+	writeItem := types.TransactWriteItem{
+		Put: &types.Put{
 			ConditionExpression:       input.ConditionExpression,
 			ExpressionAttributeNames:  input.ExpressionAttributeNames,
 			ExpressionAttributeValues: input.ExpressionAttributeValues,
@@ -115,7 +120,7 @@ func (p *Put) Tx() (*dynamodb.TransactWriteItem, error) {
 		},
 	}
 	if v := p.returnValuesOnConditionCheckFailure; v != "" {
-		writeItem.Put.ReturnValuesOnConditionCheckFailure = aws.String(v)
+		writeItem.Put.ReturnValuesOnConditionCheckFailure = v
 	}
 
 	return &writeItem, nil

@@ -19,7 +19,7 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 // EpochSeconds expresses time in unix seconds
@@ -59,13 +59,13 @@ type Change struct {
 	ApproximateCreationDateTime EpochSeconds `json:"ApproximateCreationDateTime,omitempty"`
 
 	// Keys for dynamodb modified dynamodb item
-	Keys map[string]*dynamodb.AttributeValue `json:"Keys,omitempty"`
+	Keys map[string]types.AttributeValue `json:"Keys,omitempty"`
 
 	// NewImage holds dynamodb item AFTER modification
-	NewImage map[string]*dynamodb.AttributeValue `json:"NewImage,omitempty"`
+	NewImage map[string]types.AttributeValue `json:"NewImage,omitempty"`
 
 	// OldImage holds dynamodb item BEFORE modification
-	OldImage map[string]*dynamodb.AttributeValue `json:"OldImage,omitempty"`
+	OldImage map[string]types.AttributeValue `json:"OldImage,omitempty"`
 
 	// SequenceNumber of stream record
 	SequenceNumber string `json:"SequenceNumber"`

@@ -23,9 +23,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/segmentio/ksuid"
 )
 
@@ -52,15 +51,15 @@ func (c *ConsumedCapacity) CapacityUnits() float64 {
 	return c.capacityUnits
 }
 
-func (c *ConsumedCapacity) add(in *dynamodb.ConsumedCapacity) {
+func (c *ConsumedCapacity) add(in *types.ConsumedCapacity) {
 	if in == nil {
 		return
 	}
-	if units := in.ReadCapacityUnits; units != nil && *units > 0 {
-		atomic.AddInt64(&c.ReadUnits, int64(*units))
+	if in.ReadCapacityUnits != nil && *in.ReadCapacityUnits > 0 {
+		atomic.AddInt64(&c.ReadUnits, int64(*in.ReadCapacityUnits))
 	}
-	if units := in.WriteCapacityUnits; units != nil && *units > 0 {
-		atomic.AddInt64(&c.WriteUnits, int64(*units))
+	if in.WriteCapacityUnits != nil && *in.WriteCapacityUnits > 0 {
+		atomic.AddInt64(&c.WriteUnits, int64(*in.WriteCapacityUnits))
 	}
 
 	if in.CapacityUnits != nil {
@@ -96,8 +95,23 @@ func (t *Table) DDB() *DDB {
 	return t.ddb
 }
 
+// DynamoDBAPI defines the interface for DynamoDB operations
+type DynamoDBAPI interface {
+	GetItem(ctx context.Context, params *dynamodb.GetItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error)
+	PutItem(ctx context.Context, params *dynamodb.PutItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error)
+	DeleteItem(ctx context.Context, params *dynamodb.DeleteItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.DeleteItemOutput, error)
+	UpdateItem(ctx context.Context, params *dynamodb.UpdateItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.UpdateItemOutput, error)
+	Query(ctx context.Context, params *dynamodb.QueryInput, optFns ...func(*dynamodb.Options)) (*dynamodb.QueryOutput, error)
+	Scan(ctx context.Context, params *dynamodb.ScanInput, optFns ...func(*dynamodb.Options)) (*dynamodb.ScanOutput, error)
+	TransactGetItems(ctx context.Context, params *dynamodb.TransactGetItemsInput, optFns ...func(*dynamodb.Options)) (*dynamodb.TransactGetItemsOutput, error)
+	TransactWriteItems(ctx context.Context, params *dynamodb.TransactWriteItemsInput, optFns ...func(*dynamodb.Options)) (*dynamodb.TransactWriteItemsOutput, error)
+	CreateTable(ctx context.Context, params *dynamodb.CreateTableInput, optFns ...func(*dynamodb.Options)) (*dynamodb.CreateTableOutput, error)
+	DeleteTable(ctx context.Context, params *dynamodb.DeleteTableInput, optFns ...func(*dynamodb.Options)) (*dynamodb.DeleteTableOutput, error)
+	DescribeTable(ctx context.Context, params *dynamodb.DescribeTableInput, optFns ...func(*dynamodb.Options)) (*dynamodb.DescribeTableOutput, error)
+}
+
 type DDB struct {
-	api        dynamodbiface.DynamoDBAPI
+	api        DynamoDBAPI
 	tokenFunc  func() string
 	txAttempts int                     // txAttempts refers to max number of times an Transact* will be attempted
 	txTimeout  func(int) time.Duration // txTimeout provides the getTimeout given a duration
@@ -165,34 +179,34 @@ func (d *DDB) WithTransactTimeout(fn func(i int) time.Duration) *DDB {
 // GetTx encapsulates a transactional get operation
 type GetTx interface {
 	// Decode the response from AWS
-	Decode(v *dynamodb.ItemResponse) error
+	Decode(v *types.ItemResponse) error
 	// Tx generates the get input
-	Tx() (*dynamodb.TransactGetItem, error)
+	Tx() (*types.TransactGetItem, error)
 }
 
 // TransactGetItemsWithContext wraps the get operations using a TransactGetItems
 func (d *DDB) TransactGetItemsWithContext(ctx context.Context, gets ...GetTx) (err error) {
 	input := dynamodb.TransactGetItemsInput{
-		TransactItems: make([]*dynamodb.TransactGetItem, 0, len(gets)),
+		TransactItems: make([]types.TransactGetItem, 0, len(gets)),
 	}
 	for _, get := range gets {
 		v, err := get.Tx()
 		if err != nil {
 			return err
 		}
-		input.TransactItems = append(input.TransactItems, v)
+		input.TransactItems = append(input.TransactItems, *v)
 	}
 
 	var e error
 
 loop:
 	for attempt := 1; attempt <= d.txAttempts; attempt++ {
-		output, err := d.api.TransactGetItemsWithContext(ctx, &input)
+		output, err := d.api.TransactGetItems(ctx, &input)
 		if err != nil {
-			var tce *dynamodb.TransactionCanceledException
+			var tce *types.TransactionCanceledException
 			if ok := errors.As(err, &tce); ok {
 				for _, reason := range tce.CancellationReasons {
-					if aws.StringValue(reason.Code) == "TransactionConflict" {
+					if reason.Code != nil && *reason.Code == "TransactionConflict" {
 						timeout := d.txTimeout(attempt)
 						select {
 						case <-ctx.Done():
@@ -209,7 +223,7 @@ loop:
 
 		for i, item := range output.Responses {
 			get := gets[i]
-			if err := get.Decode(item); err != nil {
+			if err := get.Decode(&item); err != nil {
 				return err
 			}
 		}
@@ -225,9 +239,9 @@ func (d *DDB) TransactGetItems(items ...GetTx) error {
 	return d.TransactGetItemsWithContext(defaultContext, items...)
 }
 
-// WriteTx converts ddb operations into instances of *dynamodb.TransactWriteItem
+// WriteTx converts ddb operations into instances of *types.TransactWriteItem
 type WriteTx interface {
-	Tx() (*dynamodb.TransactWriteItem, error)
+	Tx() (*types.TransactWriteItem, error)
 }
 
 // TransactWriteItemsWithContext applies the provided operations in a dynamodb transaction.
@@ -235,8 +249,8 @@ type WriteTx interface {
 func (d *DDB) TransactWriteItemsWithContext(ctx context.Context, items ...WriteTx) (*dynamodb.TransactWriteItemsOutput, error) {
 	token := d.tokenFunc()
 	input := dynamodb.TransactWriteItemsInput{
-		ClientRequestToken: aws.String(token),
-		TransactItems:      make([]*dynamodb.TransactWriteItem, 0, len(items)),
+		ClientRequestToken: &token,
+		TransactItems:      make([]types.TransactWriteItem, 0, len(items)),
 	}
 
 	for _, item := range items {
@@ -244,26 +258,29 @@ func (d *DDB) TransactWriteItemsWithContext(ctx context.Context, items ...WriteT
 		if err != nil {
 			return nil, err
 		}
-		input.TransactItems = append(input.TransactItems, v)
+		input.TransactItems = append(input.TransactItems, *v)
 	}
 
 	var e error
 
 loop:
 	for attempt := 1; attempt <= d.txAttempts; attempt++ {
-		output, err := d.api.TransactWriteItemsWithContext(ctx, &input)
+		output, err := d.api.TransactWriteItems(ctx, &input)
 		if err != nil {
-			var tce *dynamodb.TransactionCanceledException
+			var tce *types.TransactionCanceledException
 			if ok := errors.As(err, &tce); ok {
 				for _, reason := range tce.CancellationReasons {
-					if code := aws.StringValue(reason.Code); code == "TransactionConflictException" || code == "TransactionConflict" {
-						timeout := d.txTimeout(attempt)
-						select {
-						case <-ctx.Done():
-							return nil, ctx.Err()
-						case <-time.After(timeout):
-							e = err
-							continue loop
+					if reason.Code != nil {
+						code := *reason.Code
+						if code == "TransactionConflictException" || code == "TransactionConflict" {
+							timeout := d.txTimeout(attempt)
+							select {
+							case <-ctx.Done():
+								return nil, ctx.Err()
+							case <-time.After(timeout):
+								e = err
+								continue loop
+							}
 						}
 					}
 				}
@@ -281,7 +298,7 @@ func (d *DDB) TransactWriteItems(items ...WriteTx) (*dynamodb.TransactWriteItems
 	return d.TransactWriteItemsWithContext(defaultContext, items...)
 }
 
-func New(api dynamodbiface.DynamoDBAPI) *DDB {
+func New(api DynamoDBAPI) *DDB {
 	return &DDB{
 		api:        api,
 		tokenFunc:  makeRequestToken,

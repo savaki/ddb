@@ -16,14 +16,15 @@ package ddb
 
 import (
 	"context"
+	"errors"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/aws/smithy-go"
 )
 
 const (
-	DefaultBillingMode   = dynamodb.BillingModeProvisioned
+	DefaultBillingMode   = types.BillingModeProvisioned
 	DefaultReadCapacity  = int64(3)
 	DefaultWriteCapacity = int64(3)
 )
@@ -86,9 +87,9 @@ func WithWriteCapacity(wcap int64) TableIndexOption {
 	})
 }
 
-func makeAttributeDefinitions(spec *tableSpec) []*dynamodb.AttributeDefinition {
+func makeAttributeDefinitions(spec *tableSpec) []types.AttributeDefinition {
 	var (
-		items []*dynamodb.AttributeDefinition
+		items []types.AttributeDefinition
 		seen  = map[string]struct{}{}
 	)
 
@@ -99,9 +100,9 @@ func makeAttributeDefinitions(spec *tableSpec) []*dynamodb.AttributeDefinition {
 		if _, ok := seen[item.AttributeName]; ok {
 			return
 		}
-		items = append(items, &dynamodb.AttributeDefinition{
-			AttributeName: aws.String(item.AttributeName),
-			AttributeType: aws.String(item.AttributeType),
+		items = append(items, types.AttributeDefinition{
+			AttributeName: &item.AttributeName,
+			AttributeType: types.ScalarAttributeType(item.AttributeType),
 		})
 		seen[item.AttributeName] = struct{}{}
 	}
@@ -113,9 +114,9 @@ func makeAttributeDefinitions(spec *tableSpec) []*dynamodb.AttributeDefinition {
 		if _, ok := seen[item.AttributeName]; ok {
 			return
 		}
-		items = append(items, &dynamodb.AttributeDefinition{
-			AttributeName: aws.String(item.AttributeName),
-			AttributeType: aws.String(item.AttributeType),
+		items = append(items, types.AttributeDefinition{
+			AttributeName: &item.AttributeName,
+			AttributeType: types.ScalarAttributeType(item.AttributeType),
 		})
 		seen[item.AttributeName] = struct{}{}
 	}
@@ -137,37 +138,37 @@ func makeAttributeDefinitions(spec *tableSpec) []*dynamodb.AttributeDefinition {
 	return items
 }
 
-func makeKeySchemaElements(hashKey, rangeKey *keySpec) []*dynamodb.KeySchemaElement {
-	var items []*dynamodb.KeySchemaElement
+func makeKeySchemaElements(hashKey, rangeKey *keySpec) []types.KeySchemaElement {
+	var items []types.KeySchemaElement
 	if hashKey != nil {
-		items = append(items, &dynamodb.KeySchemaElement{
-			AttributeName: aws.String(hashKey.AttributeName),
-			KeyType:       aws.String(dynamodb.KeyTypeHash),
+		items = append(items, types.KeySchemaElement{
+			AttributeName: &hashKey.AttributeName,
+			KeyType:       types.KeyTypeHash,
 		})
 	}
 	if rangeKey != nil {
-		items = append(items, &dynamodb.KeySchemaElement{
-			AttributeName: aws.String(rangeKey.AttributeName),
-			KeyType:       aws.String(dynamodb.KeyTypeRange),
+		items = append(items, types.KeySchemaElement{
+			AttributeName: &rangeKey.AttributeName,
+			KeyType:       types.KeyTypeRange,
 		})
 	}
 	return items
 }
 
-func makeProvisionedThroughput(options tableOptions) *dynamodb.ProvisionedThroughput {
-	if options.billingMode == dynamodb.BillingModePayPerRequest {
+func makeProvisionedThroughput(options tableOptions) *types.ProvisionedThroughput {
+	if options.billingMode == string(types.BillingModePayPerRequest) {
 		return nil
 	}
 
-	return &dynamodb.ProvisionedThroughput{
-		ReadCapacityUnits:  aws.Int64(options.readCapacityUnits),
-		WriteCapacityUnits: aws.Int64(options.writeCapacityUnits),
+	return &types.ProvisionedThroughput{
+		ReadCapacityUnits:  &options.readCapacityUnits,
+		WriteCapacityUnits: &options.writeCapacityUnits,
 	}
 }
 
 func makeTableOptions(opts interface{}) tableOptions {
 	options := tableOptions{
-		billingMode:        DefaultBillingMode,
+		billingMode:        string(DefaultBillingMode),
 		readCapacityUnits:  DefaultReadCapacity,
 		writeCapacityUnits: DefaultWriteCapacity,
 	}
@@ -185,78 +186,80 @@ func makeTableOptions(opts interface{}) tableOptions {
 func makeCreateTableInput(tableName string, spec *tableSpec, opts ...TableOption) dynamodb.CreateTableInput {
 	options := makeTableOptions(opts)
 
+	billingMode := types.BillingMode(options.billingMode)
+	streamEnabled := true
 	input := dynamodb.CreateTableInput{
 		AttributeDefinitions:  makeAttributeDefinitions(spec),
-		BillingMode:           aws.String(options.billingMode),
+		BillingMode:           billingMode,
 		KeySchema:             makeKeySchemaElements(spec.HashKey, spec.RangeKey),
 		ProvisionedThroughput: makeProvisionedThroughput(options),
-		TableName:             aws.String(tableName),
+		TableName:             &tableName,
 	}
 	if options.streamViewType != "" {
-		input.StreamSpecification = &dynamodb.StreamSpecification{
-			StreamEnabled:  aws.Bool(true),
-			StreamViewType: aws.String(options.streamViewType),
+		input.StreamSpecification = &types.StreamSpecification{
+			StreamEnabled:  &streamEnabled,
+			StreamViewType: types.StreamViewType(options.streamViewType),
 		}
 	}
 
 	for _, item := range spec.Locals {
-		lsi := dynamodb.LocalSecondaryIndex{
-			IndexName: aws.String(item.IndexName),
+		lsi := types.LocalSecondaryIndex{
+			IndexName: &item.IndexName,
 			KeySchema: makeKeySchemaElements(item.HashKey, item.RangeKey),
 		}
 		if len(item.Attributes) == 0 {
 			if item.KeysOnly {
-				lsi.Projection = &dynamodb.Projection{
-					ProjectionType: aws.String(dynamodb.ProjectionTypeKeysOnly),
+				lsi.Projection = &types.Projection{
+					ProjectionType: types.ProjectionTypeKeysOnly,
 				}
 			} else {
-				lsi.Projection = &dynamodb.Projection{
-					ProjectionType: aws.String(dynamodb.ProjectionTypeAll),
+				lsi.Projection = &types.Projection{
+					ProjectionType: types.ProjectionTypeAll,
 				}
 			}
 		} else {
-			lsi.Projection = &dynamodb.Projection{
-				ProjectionType: aws.String(dynamodb.ProjectionTypeInclude),
+			lsi.Projection = &types.Projection{
+				ProjectionType: types.ProjectionTypeInclude,
 			}
 			for _, attr := range item.Attributes {
-				lsi.Projection.NonKeyAttributes = append(lsi.Projection.NonKeyAttributes, aws.String(attr.AttributeName))
+				lsi.Projection.NonKeyAttributes = append(lsi.Projection.NonKeyAttributes, attr.AttributeName)
 			}
 		}
 
-		input.LocalSecondaryIndexes = append(input.LocalSecondaryIndexes, &lsi)
+		input.LocalSecondaryIndexes = append(input.LocalSecondaryIndexes, lsi)
 	}
 
 	for _, item := range spec.Globals {
-		gsi := dynamodb.GlobalSecondaryIndex{
-			IndexName: aws.String(item.IndexName),
+		gsi := types.GlobalSecondaryIndex{
+			IndexName: &item.IndexName,
 			KeySchema: makeKeySchemaElements(item.HashKey, item.RangeKey),
 		}
-		if options.billingMode == dynamodb.BillingModeProvisioned {
-			gsi.ProvisionedThroughput = &dynamodb.ProvisionedThroughput{
-				ReadCapacityUnits:  aws.Int64(options.readCapacityUnits),
-				WriteCapacityUnits: aws.Int64(options.writeCapacityUnits),
+		if options.billingMode == string(types.BillingModeProvisioned) {
+			gsi.ProvisionedThroughput = &types.ProvisionedThroughput{
+				ReadCapacityUnits:  &options.readCapacityUnits,
+				WriteCapacityUnits: &options.writeCapacityUnits,
 			}
 		}
 		if len(item.Attributes) == 0 {
 			if item.KeysOnly {
-				gsi.Projection = &dynamodb.Projection{
-					ProjectionType: aws.String(dynamodb.ProjectionTypeKeysOnly),
+				gsi.Projection = &types.Projection{
+					ProjectionType: types.ProjectionTypeKeysOnly,
 				}
 			} else {
-				gsi.Projection = &dynamodb.Projection{
-					ProjectionType: aws.String(dynamodb.ProjectionTypeAll),
+				gsi.Projection = &types.Projection{
+					ProjectionType: types.ProjectionTypeAll,
 				}
 			}
 		} else {
-			gsi.Projection = &dynamodb.Projection{
-				ProjectionType: aws.String(dynamodb.ProjectionTypeInclude),
+			gsi.Projection = &types.Projection{
+				ProjectionType: types.ProjectionTypeInclude,
 			}
 			for _, attr := range item.Attributes {
-				gsi.Projection.NonKeyAttributes = append(gsi.Projection.NonKeyAttributes, aws.String(attr.AttributeName))
+				gsi.Projection.NonKeyAttributes = append(gsi.Projection.NonKeyAttributes, attr.AttributeName)
 			}
 		}
 
-		input.GlobalSecondaryIndexes = append(input.GlobalSecondaryIndexes, &gsi)
+		input.GlobalSecondaryIndexes = append(input.GlobalSecondaryIndexes, gsi)
 	}
 
 	return input
@@ -264,8 +267,9 @@ func makeCreateTableInput(tableName string, spec *tableSpec, opts ...TableOption
 
 func (t *Table) CreateTableIfNotExists(ctx context.Context, opts ...TableOption) error {
 	input := makeCreateTableInput(t.tableName, t.spec, opts...)
-	if _, err := t.ddb.api.CreateTableWithContext(ctx, &input); err != nil {
-		if v, ok := err.(awserr.Error); ok && v.Code() == dynamodb.ErrCodeResourceInUseException {
+	if _, err := t.ddb.api.CreateTable(ctx, &input); err != nil {
+		var apiErr smithy.APIError
+		if ok := errors.As(err, &apiErr); ok && apiErr.ErrorCode() == "ResourceInUseException" {
 			return nil
 		}
 		return err
@@ -276,10 +280,11 @@ func (t *Table) CreateTableIfNotExists(ctx context.Context, opts ...TableOption)
 
 func (t *Table) DeleteTableIfExists(ctx context.Context) error {
 	input := dynamodb.DeleteTableInput{
-		TableName: aws.String(t.tableName),
+		TableName: &t.tableName,
 	}
-	if _, err := t.ddb.api.DeleteTableWithContext(ctx, &input); err != nil {
-		if v, ok := err.(awserr.Error); ok && v.Code() == dynamodb.ErrCodeResourceNotFoundException {
+	if _, err := t.ddb.api.DeleteTable(ctx, &input); err != nil {
+		var apiErr smithy.APIError
+		if ok := errors.As(err, &apiErr); ok && apiErr.ErrorCode() == "ResourceNotFoundException" {
 			return nil
 		}
 

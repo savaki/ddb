@@ -20,37 +20,36 @@ import (
 	"io"
 	"sync"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 // Item provides handle to each record that can be unmarshalled
 type Item interface {
 	// Raw returns the raw value of the element
-	Raw() map[string]*dynamodb.AttributeValue
+	Raw() map[string]types.AttributeValue
 
 	// Unmarshal the record into the provided interface
 	Unmarshal(v interface{}) error
 }
 
 type baseItem struct {
-	raw map[string]*dynamodb.AttributeValue
+	raw map[string]types.AttributeValue
 }
 
 // Raw implements Item
-func (b baseItem) Raw() map[string]*dynamodb.AttributeValue {
+func (b baseItem) Raw() map[string]types.AttributeValue {
 	return b.raw
 }
 
 func (b baseItem) Unmarshal(v interface{}) error {
-	return dynamodbattribute.UnmarshalMap(b.raw, v)
+	return attributevalue.UnmarshalMap(b.raw, v)
 }
 
 // Scan encapsulates a scan request
 type Scan struct {
-	api            dynamodbiface.DynamoDBAPI
+	api            DynamoDBAPI
 	spec           *tableSpec
 	consistentRead bool
 	request        *ConsumedCapacity
@@ -62,35 +61,38 @@ type Scan struct {
 	totalSegments  int64
 }
 
-func (s *Scan) makeScanInput(segment, totalSegments int64, startKey map[string]*dynamodb.AttributeValue) *dynamodb.ScanInput {
+func (s *Scan) makeScanInput(segment, totalSegments int64, startKey map[string]types.AttributeValue) *dynamodb.ScanInput {
 	var (
 		filterExpr = s.expr.ConditionExpression()
 	)
 
+	tableName := s.spec.TableName
+	seg32 := int32(segment)
+	total32 := int32(totalSegments)
 	input := dynamodb.ScanInput{
-		ConsistentRead:            aws.Bool(s.consistentRead),
+		ConsistentRead:            &s.consistentRead,
 		ExclusiveStartKey:         startKey,
 		ExpressionAttributeNames:  s.expr.Names,
 		ExpressionAttributeValues: s.expr.Values,
 		FilterExpression:          filterExpr,
-		ReturnConsumedCapacity:    aws.String(dynamodb.ReturnConsumedCapacityTotal),
-		Segment:                   aws.Int64(segment),
-		TableName:                 aws.String(s.spec.TableName),
-		TotalSegments:             aws.Int64(s.totalSegments),
+		ReturnConsumedCapacity:    types.ReturnConsumedCapacityTotal,
+		Segment:                   &seg32,
+		TableName:                 &tableName,
+		TotalSegments:             &total32,
 	}
 	if s.indexName != "" {
-		input.IndexName = aws.String(s.indexName)
+		input.IndexName = &s.indexName
 	}
 
 	return &input
 }
 
 func (s *Scan) scanSegment(ctx context.Context, segment, totalSegments int64, fn func(item Item) (bool, error)) (stop bool, err error) {
-	var startKey map[string]*dynamodb.AttributeValue
+	var startKey map[string]types.AttributeValue
 
 	for {
 		input := s.makeScanInput(segment, totalSegments, startKey)
-		output, err := s.api.ScanWithContext(ctx, input)
+		output, err := s.api.Scan(ctx, input)
 		if err != nil {
 			return false, err
 		}

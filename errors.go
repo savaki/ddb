@@ -17,8 +17,7 @@ package ddb
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 const (
@@ -34,7 +33,7 @@ type Error interface {
 	error
 	Cause() error
 	Code() string
-	Keys() (hashKey, rangeKey *dynamodb.AttributeValue)
+	Keys() (hashKey, rangeKey types.AttributeValue)
 	Message() string
 	TableName() string
 }
@@ -88,8 +87,8 @@ type baseError struct {
 	code      string
 	message   string
 	cause     error
-	hashKey   *dynamodb.AttributeValue
-	rangeKey  *dynamodb.AttributeValue
+	hashKey   types.AttributeValue
+	rangeKey  types.AttributeValue
 	tableName string
 }
 
@@ -110,7 +109,7 @@ func (b *baseError) Error() string {
 
 // Keys returns keys associated with error
 // Not available for Transact* operations
-func (b *baseError) Keys() (hashKey, rangeKey *dynamodb.AttributeValue) {
+func (b *baseError) Keys() (hashKey, rangeKey types.AttributeValue) {
 	return b.hashKey, b.rangeKey
 }
 
@@ -134,23 +133,25 @@ func errorf(code, message string, args ...interface{}) Error {
 }
 
 // keyToString converts a dynamodb has or range key to string
-func keyToString(key *dynamodb.AttributeValue) string {
-	switch {
-	case key == nil:
+func keyToString(key types.AttributeValue) string {
+	if key == nil {
 		return "null"
-	case key.S != nil:
-		return aws.StringValue(key.S)
-	case key.N != nil:
-		return aws.StringValue(key.N)
-	case len(key.B) > 0:
-		return hex.EncodeToString(key.B)
+	}
+
+	switch v := key.(type) {
+	case *types.AttributeValueMemberS:
+		return v.Value
+	case *types.AttributeValueMemberN:
+		return v.Value
+	case *types.AttributeValueMemberB:
+		return hex.EncodeToString(v.Value)
 	default:
 		return "null"
 	}
 }
 
 // notFoundError generates a not found error for a given table
-func notFoundError(hashKey, rangeKey *dynamodb.AttributeValue, tableName string) Error {
+func notFoundError(hashKey, rangeKey types.AttributeValue, tableName string) Error {
 	var message string
 	switch {
 	case hashKey == nil && rangeKey == nil:
