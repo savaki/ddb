@@ -1,7 +1,16 @@
 {
+  "Key": {
+    "Date": {
+      "Value": "world"
+    },
+    "ID": {
+      "Value": "hello"
+    }
+  },
+  "TableName": "example",
   "AttributeUpdates": null,
   "ConditionExpression": null,
-  "ConditionalOperator": null,
+  "ConditionalOperator": "",
   "Expected": null,
   "ExpressionAttributeNames": {
     "#n1": "a",
@@ -9,59 +18,15 @@
   },
   "ExpressionAttributeValues": {
     ":v1": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": "123",
-      "NS": null,
-      "NULL": null,
-      "S": null,
-      "SS": null
+      "Value": "123"
     },
     ":v2": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": "456",
-      "NS": null,
-      "NULL": null,
-      "S": null,
-      "SS": null
-    }
-  },
-  "Key": {
-    "Date": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": null,
-      "NS": null,
-      "NULL": null,
-      "S": "world",
-      "SS": null
-    },
-    "ID": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": null,
-      "NS": null,
-      "NULL": null,
-      "S": "hello",
-      "SS": null
+      "Value": "456"
     }
   },
   "ReturnConsumedCapacity": "TOTAL",
-  "ReturnItemCollectionMetrics": null,
+  "ReturnItemCollectionMetrics": "",
   "ReturnValues": "NONE",
-  "TableName": "example",
+  "ReturnValuesOnConditionCheckFailure": "",
   "UpdateExpression": "Set #n1 = :v1, #n2 = :v2"
 }

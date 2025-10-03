@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
@@ -84,9 +85,17 @@ func (q *Query) EachWithContext(ctx context.Context, fn func(item Item) (bool, e
 				*q.lastEvaluatedToken = ""
 
 			default:
-				data, e := json.Marshal(startKey)
+				// Convert AttributeValue map to a marshalable format
+				intermediate := make(map[string]interface{})
+				for k, v := range startKey {
+					var val interface{}
+					if e := attributevalue.Unmarshal(v, &val); e == nil {
+						intermediate[k] = val
+					}
+				}
+				data, e := json.Marshal(intermediate)
 				if e != nil {
-					err = fmt.Errorf("failed to marshal startKey: %w", err)
+					err = fmt.Errorf("failed to marshal startKey: %w", e)
 				}
 				*q.lastEvaluatedToken = base64.StdEncoding.EncodeToString(data)
 			}
@@ -318,9 +327,17 @@ func (q *Query) StartToken(token string) *Query {
 		return q
 	}
 
-	var startKey map[string]types.AttributeValue
-	if err := json.Unmarshal(data, &startKey); err != nil {
-		q.err = fmt.Errorf("failed to json decode start token:% w", err)
+	// Decode from JSON to intermediate format
+	var intermediate map[string]interface{}
+	if err := json.Unmarshal(data, &intermediate); err != nil {
+		q.err = fmt.Errorf("failed to json decode start token: %w", err)
+		return q
+	}
+
+	// Convert to AttributeValue map
+	startKey, err := attributevalue.MarshalMap(intermediate)
+	if err != nil {
+		q.err = fmt.Errorf("failed to convert start token to AttributeValue: %w", err)
 		return q
 	}
 

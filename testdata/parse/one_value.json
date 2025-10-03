@@ -1,23 +1,14 @@
 {
+  "Names": null,
+  "Values": {
+    ":v1": {
+      "Value": "world"
+    }
+  },
   "Adds": null,
   "Conditions": null,
   "Deletes": null,
   "Filters": null,
-  "Names": null,
   "Removes": null,
-  "Sets": null,
-  "Values": {
-    ":v1": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": null,
-      "NS": null,
-      "NULL": null,
-      "S": "world",
-      "SS": null
-    }
-  }
+  "Sets": null
 }

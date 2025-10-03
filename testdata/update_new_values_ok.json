@@ -1,54 +1,28 @@
 {
+  "Key": {
+    "Date": {
+      "Value": "world"
+    },
+    "ID": {
+      "Value": "hello"
+    }
+  },
+  "TableName": "example",
   "AttributeUpdates": null,
   "ConditionExpression": null,
-  "ConditionalOperator": null,
+  "ConditionalOperator": "",
   "Expected": null,
   "ExpressionAttributeNames": {
     "#n1": "a"
   },
   "ExpressionAttributeValues": {
     ":v1": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": null,
-      "NS": null,
-      "NULL": null,
-      "S": "blah",
-      "SS": null
-    }
-  },
-  "Key": {
-    "Date": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": null,
-      "NS": null,
-      "NULL": null,
-      "S": "world",
-      "SS": null
-    },
-    "ID": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": null,
-      "NS": null,
-      "NULL": null,
-      "S": "hello",
-      "SS": null
+      "Value": "blah"
     }
   },
   "ReturnConsumedCapacity": "TOTAL",
-  "ReturnItemCollectionMetrics": null,
+  "ReturnItemCollectionMetrics": "",
   "ReturnValues": "ALL_NEW",
-  "TableName": "example",
+  "ReturnValuesOnConditionCheckFailure": "",
   "UpdateExpression": "Set #n1 = :v1"
 }

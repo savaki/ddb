@@ -1,52 +1,26 @@
 {
+  "Key": {
+    "Date": {
+      "Value": "2006-01-02"
+    },
+    "ID": {
+      "Value": "abc"
+    }
+  },
+  "TableName": "example",
   "ConditionExpression": "#n1 != :v1",
-  "ConditionalOperator": null,
+  "ConditionalOperator": "",
   "Expected": null,
   "ExpressionAttributeNames": {
     "#n1": "ID"
   },
   "ExpressionAttributeValues": {
     ":v1": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": null,
-      "NS": null,
-      "NULL": null,
-      "S": "def",
-      "SS": null
-    }
-  },
-  "Key": {
-    "Date": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": null,
-      "NS": null,
-      "NULL": null,
-      "S": "2006-01-02",
-      "SS": null
-    },
-    "ID": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": null,
-      "NS": null,
-      "NULL": null,
-      "S": "abc",
-      "SS": null
+      "Value": "def"
     }
   },
   "ReturnConsumedCapacity": "TOTAL",
-  "ReturnItemCollectionMetrics": null,
-  "ReturnValues": null,
-  "TableName": "example"
+  "ReturnItemCollectionMetrics": "",
+  "ReturnValues": "",
+  "ReturnValuesOnConditionCheckFailure": ""
 }

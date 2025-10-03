@@ -1,37 +1,20 @@
 {
+  "Item": {
+    "Field": {
+      "Value": "def"
+    },
+    "ID": {
+      "Value": "abc"
+    }
+  },
+  "TableName": "example",
   "ConditionExpression": null,
-  "ConditionalOperator": null,
+  "ConditionalOperator": "",
   "Expected": null,
   "ExpressionAttributeNames": null,
   "ExpressionAttributeValues": null,
-  "Item": {
-    "Field": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": null,
-      "NS": null,
-      "NULL": null,
-      "S": "def",
-      "SS": null
-    },
-    "ID": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": null,
-      "NS": null,
-      "NULL": null,
-      "S": "abc",
-      "SS": null
-    }
-  },
-  "ReturnConsumedCapacity": null,
-  "ReturnItemCollectionMetrics": null,
-  "ReturnValues": null,
-  "TableName": "example"
+  "ReturnConsumedCapacity": "",
+  "ReturnItemCollectionMetrics": "",
+  "ReturnValues": "",
+  "ReturnValuesOnConditionCheckFailure": ""
 }

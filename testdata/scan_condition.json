@@ -1,6 +1,7 @@
 {
+  "TableName": "example",
   "AttributesToGet": null,
-  "ConditionalOperator": null,
+  "ConditionalOperator": "",
   "ConsistentRead": false,
   "ExclusiveStartKey": null,
   "ExpressionAttributeNames": {
@@ -8,16 +9,7 @@
   },
   "ExpressionAttributeValues": {
     ":v1": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": null,
-      "NS": null,
-      "NULL": null,
-      "S": "abc",
-      "SS": null
+      "Value": "abc"
     }
   },
   "FilterExpression": "#n1 = :v1",
@@ -27,7 +19,6 @@
   "ReturnConsumedCapacity": "TOTAL",
   "ScanFilter": null,
   "Segment": 0,
-  "Select": null,
-  "TableName": "example",
-  "TotalSegments": 0
+  "Select": "",
+  "TotalSegments": 1
 }

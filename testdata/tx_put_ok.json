@@ -1,45 +1,27 @@
 {
-  "ClientRequestToken": "def",
-  "ReturnConsumedCapacity": null,
-  "ReturnItemCollectionMetrics": null,
   "TransactItems": [
     {
       "ConditionCheck": null,
       "Delete": null,
       "Put": {
+        "Item": {
+          "ID": {
+            "Value": "abc"
+          },
+          "Name": {
+            "Value": "blah"
+          }
+        },
+        "TableName": "blah",
         "ConditionExpression": null,
         "ExpressionAttributeNames": null,
         "ExpressionAttributeValues": null,
-        "Item": {
-          "ID": {
-            "B": null,
-            "BOOL": null,
-            "BS": null,
-            "L": null,
-            "M": null,
-            "N": null,
-            "NS": null,
-            "NULL": null,
-            "S": "abc",
-            "SS": null
-          },
-          "Name": {
-            "B": null,
-            "BOOL": null,
-            "BS": null,
-            "L": null,
-            "M": null,
-            "N": null,
-            "NS": null,
-            "NULL": null,
-            "S": "blah",
-            "SS": null
-          }
-        },
-        "ReturnValuesOnConditionCheckFailure": "NONE",
-        "TableName": "blah"
+        "ReturnValuesOnConditionCheckFailure": "NONE"
       },
       "Update": null
     }
-  ]
+  ],
+  "ClientRequestToken": "def",
+  "ReturnConsumedCapacity": "",
+  "ReturnItemCollectionMetrics": ""
 }

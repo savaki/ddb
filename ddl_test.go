@@ -131,9 +131,17 @@ func Test_makeCreateTableInput(t *testing.T) {
 }
 
 func assertEqual(t *testing.T, v interface{}, filename string) {
-	data, err := json.Marshal(v)
+	data, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		t.Fatalf("got %v; want nil", err)
+	}
+
+	// If UPDATE_TESTDATA env var is set, write the new data
+	if os.Getenv("UPDATE_TESTDATA") == "1" {
+		if err := ioutil.WriteFile(filename, data, 0644); err != nil {
+			t.Fatalf("failed to write testdata: %v", err)
+		}
+		return
 	}
 
 	var got map[string]interface{}

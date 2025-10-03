@@ -1,35 +1,17 @@
 {
+  "Names": null,
+  "Values": {
+    ":v1": {
+      "Value": "aa"
+    },
+    ":v2": {
+      "Value": "bb"
+    }
+  },
   "Adds": null,
   "Conditions": null,
   "Deletes": null,
   "Filters": null,
-  "Names": null,
   "Removes": null,
-  "Sets": null,
-  "Values": {
-    ":v1": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": null,
-      "NS": null,
-      "NULL": null,
-      "S": "aa",
-      "SS": null
-    },
-    ":v2": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": null,
-      "NS": null,
-      "NULL": null,
-      "S": "bb",
-      "SS": null
-    }
-  }
+  "Sets": null
 }

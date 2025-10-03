@@ -1,10 +1,10 @@
 {
+  "Names": null,
+  "Values": null,
   "Adds": null,
   "Conditions": null,
   "Deletes": null,
   "Filters": null,
-  "Names": null,
   "Removes": null,
-  "Sets": null,
-  "Values": null
+  "Sets": null
 }

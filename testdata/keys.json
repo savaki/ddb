@@ -1,26 +1,8 @@
 {
   "Hash": {
-    "B": null,
-    "BOOL": null,
-    "BS": null,
-    "L": null,
-    "M": null,
-    "N": null,
-    "NS": null,
-    "NULL": null,
-    "S": "abc",
-    "SS": null
+    "Value": "abc"
   },
   "Range": {
-    "B": null,
-    "BOOL": null,
-    "BS": null,
-    "L": null,
-    "M": null,
-    "N": null,
-    "NS": null,
-    "NULL": null,
-    "S": "def",
-    "SS": null
+    "Value": "def"
   }
 }

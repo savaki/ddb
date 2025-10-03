@@ -1,6 +1,7 @@
 {
+  "TableName": "example",
   "AttributesToGet": null,
-  "ConditionalOperator": null,
+  "ConditionalOperator": "",
   "ConsistentRead": true,
   "ExclusiveStartKey": null,
   "ExpressionAttributeNames": {
@@ -9,28 +10,10 @@
   },
   "ExpressionAttributeValues": {
     ":v1": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": null,
-      "NS": null,
-      "NULL": null,
-      "S": "abc",
-      "SS": null
+      "Value": "abc"
     },
     ":v2": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": null,
-      "NS": null,
-      "NULL": null,
-      "S": "2019-03-10",
-      "SS": null
+      "Value": "2019-03-10"
     }
   },
   "FilterExpression": null,
@@ -42,6 +25,5 @@
   "QueryFilter": null,
   "ReturnConsumedCapacity": "TOTAL",
   "ScanIndexForward": true,
-  "Select": "ALL_ATTRIBUTES",
-  "TableName": "example"
+  "Select": "ALL_ATTRIBUTES"
 }

@@ -1,41 +1,24 @@
 {
+  "Key": {
+    "Date": {
+      "Value": "world"
+    },
+    "ID": {
+      "Value": "hello"
+    }
+  },
+  "TableName": "example",
   "AttributeUpdates": null,
   "ConditionExpression": null,
-  "ConditionalOperator": null,
+  "ConditionalOperator": "",
   "Expected": null,
   "ExpressionAttributeNames": {
     "#n1": "Count"
   },
   "ExpressionAttributeValues": null,
-  "Key": {
-    "Date": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": null,
-      "NS": null,
-      "NULL": null,
-      "S": "world",
-      "SS": null
-    },
-    "ID": {
-      "B": null,
-      "BOOL": null,
-      "BS": null,
-      "L": null,
-      "M": null,
-      "N": null,
-      "NS": null,
-      "NULL": null,
-      "S": "hello",
-      "SS": null
-    }
-  },
   "ReturnConsumedCapacity": "TOTAL",
-  "ReturnItemCollectionMetrics": null,
+  "ReturnItemCollectionMetrics": "",
   "ReturnValues": "NONE",
-  "TableName": "example",
+  "ReturnValuesOnConditionCheckFailure": "",
   "UpdateExpression": "Remove #n1"
 }

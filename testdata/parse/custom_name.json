@@ -1,12 +1,12 @@
 {
+  "Names": {
+    "#n1": "custom"
+  },
+  "Values": null,
   "Adds": null,
   "Conditions": null,
   "Deletes": null,
   "Filters": null,
-  "Names": {
-    "#n1": "custom"
-  },
   "Removes": null,
-  "Sets": null,
-  "Values": null
+  "Sets": null
 }

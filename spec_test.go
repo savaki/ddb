@@ -15,10 +15,10 @@
 package ddb
 
 import (
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"reflect"
 	"testing"
+
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 type Model struct {
@@ -99,13 +99,14 @@ type Key struct {
 	S string
 }
 
-func (k Key) MarshalDynamoDBAttributeValue(item *dynamodb.AttributeValue) error {
-	item.S = aws.String(k.S)
-	return nil
+func (k Key) MarshalDynamoDBAttributeValue() (types.AttributeValue, error) {
+	return &types.AttributeValueMemberS{Value: k.S}, nil
 }
 
-func (k *Key) UnmarshalDynamoDBAttributeValue(item *dynamodb.AttributeValue) error {
-	*k = Key{S: aws.StringValue(item.S)}
+func (k *Key) UnmarshalDynamoDBAttributeValue(item types.AttributeValue) error {
+	if s, ok := item.(*types.AttributeValueMemberS); ok {
+		*k = Key{S: s.Value}
+	}
 	return nil
 }
 

@@ -9,8 +9,6 @@
       "AttributeType": "N"
     }
   ],
-  "BillingMode": "PROVISIONED",
-  "GlobalSecondaryIndexes": null,
   "KeySchema": [
     {
       "AttributeName": "Hash",
@@ -21,13 +19,19 @@
       "KeyType": "RANGE"
     }
   ],
+  "TableName": "blah",
+  "BillingMode": "PROVISIONED",
+  "DeletionProtectionEnabled": null,
+  "GlobalSecondaryIndexes": null,
   "LocalSecondaryIndexes": null,
+  "OnDemandThroughput": null,
   "ProvisionedThroughput": {
     "ReadCapacityUnits": 4,
     "WriteCapacityUnits": 5
   },
+  "ResourcePolicy": null,
   "SSESpecification": null,
   "StreamSpecification": null,
-  "TableName": "blah",
+  "TableClass": "",
   "Tags": null
 }
