@@ -1,4 +1,4 @@
-module github.com/savaki/ddb
+module github.com/savaki/ddb/v2
 
 go 1.12
 
