@@ -77,7 +77,7 @@ func Test_makeCreateTableInput(t *testing.T) {
 
 	t.Run("pay per request", func(t *testing.T) {
 		got := makeCreateTableInput(tableName, spec,
-			WithBillingMode(string(types.BillingModePayPerRequest)),
+			WithBillingMode(types.BillingModePayPerRequest),
 		)
 		assertEqual(t, got, "testdata/pay_per_request.json")
 	})
@@ -270,10 +270,11 @@ func TestTable_CreateTableIfNotExists_Live(t *testing.T) {
 		tableName := fmt.Sprintf("gsi-payper-%v", time.Now().UnixNano())
 		table := New(api).MustTable(tableName, GSI{})
 
-		err := table.CreateTableIfNotExists(ctx, WithBillingMode(string(types.BillingModePayPerRequest)))
+		err := table.CreateTableIfNotExists(ctx, WithBillingMode(types.BillingModePayPerRequest))
 		if err != nil {
 			t.Fatalf("got %v; want nil", err)
 		}
+		//goland:noinspection GoUnhandledErrorResult
 		defer table.DeleteTableIfExists(ctx)
 	})
 

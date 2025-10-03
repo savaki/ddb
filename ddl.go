@@ -42,7 +42,7 @@ type attribute struct {
 type tableOptions struct {
 	attributes         []attribute
 	keys               keyOptions
-	billingMode        string
+	billingMode        types.BillingMode
 	projectionType     string
 	readCapacityUnits  int64
 	streamViewType     string
@@ -63,7 +63,7 @@ func (fn tableIndexFunc) ApplyTable(o *tableOptions) {
 	fn(o)
 }
 
-func WithBillingMode(mode string) TableOption {
+func WithBillingMode(mode types.BillingMode) TableOption {
 	return tableIndexFunc(func(o *tableOptions) {
 		o.billingMode = mode
 	})
@@ -156,7 +156,7 @@ func makeKeySchemaElements(hashKey, rangeKey *keySpec) []types.KeySchemaElement 
 }
 
 func makeProvisionedThroughput(options tableOptions) *types.ProvisionedThroughput {
-	if options.billingMode == string(types.BillingModePayPerRequest) {
+	if options.billingMode == types.BillingModePayPerRequest {
 		return nil
 	}
 
@@ -168,7 +168,7 @@ func makeProvisionedThroughput(options tableOptions) *types.ProvisionedThroughpu
 
 func makeTableOptions(opts interface{}) tableOptions {
 	options := tableOptions{
-		billingMode:        string(DefaultBillingMode),
+		billingMode:        DefaultBillingMode,
 		readCapacityUnits:  DefaultReadCapacity,
 		writeCapacityUnits: DefaultWriteCapacity,
 	}
@@ -186,7 +186,7 @@ func makeTableOptions(opts interface{}) tableOptions {
 func makeCreateTableInput(tableName string, spec *tableSpec, opts ...TableOption) dynamodb.CreateTableInput {
 	options := makeTableOptions(opts)
 
-	billingMode := types.BillingMode(options.billingMode)
+	billingMode := options.billingMode
 	streamEnabled := true
 	input := dynamodb.CreateTableInput{
 		AttributeDefinitions:  makeAttributeDefinitions(spec),
@@ -234,7 +234,7 @@ func makeCreateTableInput(tableName string, spec *tableSpec, opts ...TableOption
 			IndexName: &item.IndexName,
 			KeySchema: makeKeySchemaElements(item.HashKey, item.RangeKey),
 		}
-		if options.billingMode == string(types.BillingModeProvisioned) {
+		if options.billingMode == types.BillingModeProvisioned {
 			gsi.ProvisionedThroughput = &types.ProvisionedThroughput{
 				ReadCapacityUnits:  &options.readCapacityUnits,
 				WriteCapacityUnits: &options.writeCapacityUnits,

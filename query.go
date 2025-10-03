@@ -33,7 +33,7 @@ type Query struct {
 	lastEvaluatedKey   *map[string]types.AttributeValue
 	lastEvaluatedToken *string
 	limit              int64
-	selectAttributes   string
+	selectAttributes   types.Select
 	scanIndexForward   bool
 	startKey           map[string]types.AttributeValue
 	request            *ConsumedCapacity
@@ -258,7 +258,7 @@ func (q *Query) QueryInput() (*dynamodb.QueryInput, error) {
 	}
 
 	if q.selectAttributes == "" {
-		q.selectAttributes = string(types.SelectAllAttributes)
+		q.selectAttributes = types.Select(types.SelectAllAttributes)
 	}
 
 	tableName := q.spec.TableName
@@ -285,7 +285,7 @@ func (q *Query) QueryInput() (*dynamodb.QueryInput, error) {
 }
 
 // Select attributes to return; defaults to dynamodb.SelectAllAttributes
-func (q *Query) Select(s string) *Query {
+func (q *Query) Select(s types.Select) *Query {
 	q.selectAttributes = s
 	return q
 }
