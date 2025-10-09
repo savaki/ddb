@@ -328,6 +328,22 @@ func BenchmarkExpression_AddExpressionAttributeValue(b *testing.B) {
 			name:   "mixed_types",
 			values: []interface{}{"string", 42, true, 3.14, "another"},
 		},
+		{
+			name:   "all_int_types",
+			values: []interface{}{int(1), int8(2), int16(3), int32(4), int64(5)},
+		},
+		{
+			name:   "all_uint_types",
+			values: []interface{}{uint(1), uint8(2), uint16(3), uint32(4), uint64(5)},
+		},
+		{
+			name:   "float_types",
+			values: []interface{}{float32(3.14), float64(2.718)},
+		},
+		{
+			name:   "byte_slice",
+			values: []interface{}{[]byte("hello"), []byte("world")},
+		},
 	}
 
 	for _, bm := range benchmarks {

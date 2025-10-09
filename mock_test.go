@@ -133,12 +133,12 @@ func (m *Mock) Query(ctx context.Context, input *dynamodb.QueryInput, opts ...fu
 }
 
 func (m *Mock) Scan(ctx context.Context, input *dynamodb.ScanInput, opts ...func(*dynamodb.Options)) (*dynamodb.ScanOutput, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	m.scanInput = input
 
 	var output dynamodb.ScanOutput
-
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
 
 	if n := len(m.scanItems); n > 0 {
 		item, err := marshalMap(m.scanItems[0])

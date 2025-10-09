@@ -9,3 +9,9 @@
 #
 go.sum
 coverage.*
+
+# ignore profiling artifacts
+#
+*.prof
+*.test
+*.out

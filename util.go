@@ -15,6 +15,8 @@
 package ddb
 
 import (
+	"strconv"
+
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
@@ -58,6 +60,51 @@ func marshal(item interface{}) (types.AttributeValue, error) {
 		return &types.AttributeValueMemberM{Value: v}, nil
 	case []types.AttributeValue:
 		return &types.AttributeValueMemberL{Value: v}, nil
+
+	// Fast paths for common types - avoid reflection
+
+	// String types
+	case string:
+		return &types.AttributeValueMemberS{Value: v}, nil
+
+	// Boolean
+	case bool:
+		return &types.AttributeValueMemberBOOL{Value: v}, nil
+
+	// Signed integers
+	case int:
+		return &types.AttributeValueMemberN{Value: strconv.Itoa(v)}, nil
+	case int8:
+		return &types.AttributeValueMemberN{Value: strconv.FormatInt(int64(v), 10)}, nil
+	case int16:
+		return &types.AttributeValueMemberN{Value: strconv.FormatInt(int64(v), 10)}, nil
+	case int32:
+		return &types.AttributeValueMemberN{Value: strconv.FormatInt(int64(v), 10)}, nil
+	case int64:
+		return &types.AttributeValueMemberN{Value: strconv.FormatInt(v, 10)}, nil
+
+	// Unsigned integers
+	case uint:
+		return &types.AttributeValueMemberN{Value: strconv.FormatUint(uint64(v), 10)}, nil
+	case uint8:
+		return &types.AttributeValueMemberN{Value: strconv.FormatUint(uint64(v), 10)}, nil
+	case uint16:
+		return &types.AttributeValueMemberN{Value: strconv.FormatUint(uint64(v), 10)}, nil
+	case uint32:
+		return &types.AttributeValueMemberN{Value: strconv.FormatUint(uint64(v), 10)}, nil
+	case uint64:
+		return &types.AttributeValueMemberN{Value: strconv.FormatUint(v, 10)}, nil
+
+	// Floating point
+	case float32:
+		return &types.AttributeValueMemberN{Value: strconv.FormatFloat(float64(v), 'f', -1, 32)}, nil
+	case float64:
+		return &types.AttributeValueMemberN{Value: strconv.FormatFloat(v, 'f', -1, 64)}, nil
+
+	// Byte slice
+	case []byte:
+		return &types.AttributeValueMemberB{Value: v}, nil
+
 	default:
 		return attributevalue.Marshal(item)
 	}

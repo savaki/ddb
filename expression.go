@@ -26,6 +26,7 @@ import (
 type expression struct {
 	attributes []*attributeSpec
 	Names      map[string]string
+	namesRev   map[string]string // reverse lookup: attribute name -> key
 	Values     map[string]types.AttributeValue
 	index      int64
 
@@ -43,34 +44,46 @@ func newExpression(attributes ...*attributeSpec) *expression {
 	}
 }
 
+// addName adds a name to both Names and namesRev maps and returns the generated key.
+// The go:inline directive forces the compiler to inline this function for performance.
+//
+//go:inline
+func (e *expression) addName(name string) string {
+	key := "#n" + strconv.Itoa(len(e.Names)+1)
+	e.Names[key] = name
+	e.namesRev[name] = key
+	return key
+}
+
 func (e *expression) addExpressionAttributeName(name string) string {
 	if e.Names == nil {
-		e.Names = map[string]string{}
+		e.Names = make(map[string]string, 4)
+		e.namesRev = make(map[string]string, 4)
 	}
 
-	// use existing attribute name where possible
-	for k, v := range e.Names {
-		if v == name {
-			return k
-		}
+	// use existing attribute name where possible (O(1) lookup)
+	if key, exists := e.namesRev[name]; exists {
+		return key
 	}
 
-	key := "#n" + strconv.Itoa(len(e.Names)+1)
+	// Check if name matches an attribute spec
 	for _, attr := range e.attributes {
 		switch name {
 		case attr.AttributeName, attr.FieldName:
-			e.Names[key] = attr.AttributeName
-			return key
+			// Check if we already have this attribute name mapped
+			if key, exists := e.namesRev[attr.AttributeName]; exists {
+				return key
+			}
+			return e.addName(attr.AttributeName)
 		}
 	}
 
-	e.Names[key] = name
-	return key
+	return e.addName(name)
 }
 
 func (e *expression) addExpressionAttributeValue(item types.AttributeValue) string {
 	if e.Values == nil {
-		e.Values = map[string]types.AttributeValue{}
+		e.Values = make(map[string]types.AttributeValue, 4)
 	}
 
 	id := atomic.AddInt64(&e.index, 1)
@@ -100,30 +113,38 @@ func (e *expression) UpdateExpression() *string {
 		return nil
 	}
 
-	buf := &strings.Builder{} //make([]byte, 0, size))
+	buf := &strings.Builder{}
 	buf.Grow(size)
 
 	// ordering as defined here:
 	// https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.UpdateExpressions.html
+	first := true
 	if e.Sets != nil {
 		buf.WriteString(e.Sets.String())
-		buf.WriteString(" ")
+		first = false
 	}
 	if e.Removes != nil {
+		if !first {
+			buf.WriteString(" ")
+		}
 		buf.WriteString(e.Removes.String())
-		buf.WriteString(" ")
+		first = false
 	}
 	if e.Adds != nil {
+		if !first {
+			buf.WriteString(" ")
+		}
 		buf.WriteString(e.Adds.String())
-		buf.WriteString(" ")
+		first = false
 	}
 	if e.Deletes != nil {
+		if !first {
+			buf.WriteString(" ")
+		}
 		buf.WriteString(e.Deletes.String())
-		buf.WriteString(" ")
 	}
 
-	expr := buf.String()
-	result := expr[0 : len(expr)-1]
+	result := buf.String()
 	return &result
 }
 
@@ -151,8 +172,16 @@ func (e *expression) append(buf *strings.Builder, keyword, separator, expr strin
 		return err
 	}
 
-	// expr
-	//
+	// Trim leading/trailing space inline to avoid allocation
+	start := 0
+	end := len(expr)
+	for start < end && expr[start] == ' ' {
+		start++
+	}
+	for end > start && expr[end-1] == ' ' {
+		end--
+	}
+
 	if buf.Len() == 0 {
 		if len(keyword) > 0 {
 			buf.WriteString(keyword)
@@ -161,7 +190,7 @@ func (e *expression) append(buf *strings.Builder, keyword, separator, expr strin
 	} else {
 		buf.WriteString(separator)
 	}
-	buf.WriteString(strings.TrimSpace(expr))
+	buf.WriteString(expr[start:end])
 
 	return nil
 }
