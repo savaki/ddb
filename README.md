@@ -7,6 +7,45 @@ ddb
 
 `ddb` is a high level library for accessing DynamoDB.
 
+## Upgrading from v1 to v2
+
+Version 2.0.0 migrates from AWS SDK v1 to AWS SDK v2. This introduces some breaking changes:
+
+### Breaking Changes
+
+1. **Module Path**: Update your imports from `github.com/savaki/ddb` to `github.com/savaki/ddb/v2`
+
+2. **DynamoDB Client**: The `New()` function now accepts the AWS SDK v2 client:
+   ```go
+   // v1
+   import "github.com/aws/aws-sdk-go/service/dynamodb"
+   api := dynamodb.New(session.Must(session.NewSession()))
+   db := ddb.New(api)
+
+   // v2
+   import "github.com/aws/aws-sdk-go-v2/service/dynamodb"
+   cfg, _ := config.LoadDefaultConfig(context.TODO())
+   api := dynamodb.NewFromConfig(cfg)
+   db := ddb.New(api)
+   ```
+
+3. **Billing Mode**: `WithBillingMode()` now accepts a typed constant instead of string:
+   ```go
+   // v1
+   ddb.WithBillingMode(dynamodb.BillingModePayPerRequest)
+
+   // v2
+   import "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+   ddb.WithBillingMode(types.BillingModePayPerRequest)
+   ```
+
+### What Hasn't Changed
+
+- All table operations (Get, Put, Query, Scan, Update, Delete) work exactly the same
+- Struct tags (`ddb` and `dynamodbav`) remain unchanged
+- Transaction support is unchanged
+- DynamoDB Streams support is unchanged
+
 ### QuickStart
 
 ```golang
