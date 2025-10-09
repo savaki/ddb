@@ -47,7 +47,8 @@ func (b baseItem) Unmarshal(v interface{}) error {
 	return attributevalue.UnmarshalMap(b.raw, v)
 }
 
-// Scan encapsulates a scan request
+// Scan represents a DynamoDB Scan operation with support for parallel scanning,
+// filtering, and consumed capacity tracking
 type Scan struct {
 	api            DynamoDBAPI
 	spec           *tableSpec
@@ -235,20 +236,22 @@ func (s *Scan) FirstWithContext(ctx context.Context, v interface{}) error {
 	return nil
 }
 
-// IndexName to scan for
+// IndexName specifies the name of a secondary index to scan.
+// If not specified, the scan operates on the base table.
 func (s *Scan) IndexName(indexName string) *Scan {
 	s.indexName = indexName
 	return s
 }
 
-// TotalSegments allows for the Scan operation to run in parallel.  If not set, defaults
-// to 1 segment
+// TotalSegments enables parallel scanning by dividing the table into segments.
+// Each segment is scanned concurrently. Defaults to 1 (sequential scan).
 func (s *Scan) TotalSegments(n int64) *Scan {
 	s.totalSegments = n
 	return s
 }
 
-// Scan initiates the scan operation
+// Scan creates a new Scan operation to retrieve all items in the table.
+// Use Filter() to conditionally filter results and TotalSegments() for parallel scanning.
 func (t *Table) Scan() *Scan {
 	return &Scan{
 		api:   t.ddb.api,

@@ -5,19 +5,19 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 )
 
 func TestInt64Set(t *testing.T) {
 	want := Int64Set{1, 2, 3}
 
-	item, err := dynamodbattribute.Marshal(want)
+	item, err := attributevalue.Marshal(want)
 	if err != nil {
 		t.Fatalf("got %v; want nil", err)
 	}
 
 	var got Int64Set
-	err = dynamodbattribute.Unmarshal(item, &got)
+	err = attributevalue.Unmarshal(item, &got)
 	if err != nil {
 		t.Fatalf("got %v; want nil", err)
 	}
@@ -29,13 +29,13 @@ func TestInt64Set(t *testing.T) {
 func TestStringSet(t *testing.T) {
 	want := StringSet{"a", "b", "c"}
 
-	item, err := dynamodbattribute.Marshal(want)
+	item, err := attributevalue.Marshal(want)
 	if err != nil {
 		t.Fatalf("got %v; want nil", err)
 	}
 
 	var got StringSet
-	err = dynamodbattribute.Unmarshal(item, &got)
+	err = attributevalue.Unmarshal(item, &got)
 	if err != nil {
 		t.Fatalf("got %v; want nil", err)
 	}

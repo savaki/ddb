@@ -20,17 +20,28 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	streamtypes "github.com/aws/aws-sdk-go-v2/service/dynamodbstreams/types"
 )
 
-// EpochSeconds expresses time in unix seconds
+// DynamoDB Streams event name constants (re-exported from AWS SDK for convenience)
+const (
+	EventNameInsert = string(streamtypes.OperationTypeInsert)
+	EventNameModify = string(streamtypes.OperationTypeModify)
+	EventNameRemove = string(streamtypes.OperationTypeRemove)
+)
+
+// EpochSeconds represents a timestamp as Unix seconds (seconds since January 1, 1970 UTC).
+// This type is used for DynamoDB stream timestamps.
 type EpochSeconds int64
 
-// MarshalJSON implements json.Marshaler
+// MarshalJSON marshals EpochSeconds to JSON as a floating-point number.
+// This implements the json.Marshaler interface.
 func (e EpochSeconds) MarshalJSON() ([]byte, error) {
 	return json.Marshal(float64(e))
 }
 
-// UnmarshalJSON implements json.Unmarshaler
+// UnmarshalJSON unmarshals JSON into EpochSeconds from a floating-point number.
+// This implements the json.Unmarshaler interface.
 func (e *EpochSeconds) UnmarshalJSON(data []byte) error {
 	var v float64
 	if err := json.Unmarshal(data, &v); err != nil {
@@ -40,19 +51,20 @@ func (e *EpochSeconds) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Time returns time.Time
+// Time converts EpochSeconds to a time.Time value.
 func (e EpochSeconds) Time() time.Time {
 	return time.Unix(int64(e), 0)
 }
 
-// Window refers to the tumbling window
-// https://aws.amazon.com/blogs/compute/using-aws-lambda-for-streaming-analytics/
+// Window represents a tumbling window for Lambda stream processing.
+// See https://aws.amazon.com/blogs/compute/using-aws-lambda-for-streaming-analytics/
 type Window struct {
 	Start string `json:"start,omitempty"`
 	End   string `json:"end,omitempty"`
 }
 
-// Change represents the change performed
+// Change represents a modification to a DynamoDB item, including the keys,
+// old image, and new image of the item.
 type Change struct {
 	// The approximate date and time when the stream record was created, in UNIX
 	// epoch time (http://www.epochconverter.com/) format.
@@ -78,7 +90,8 @@ type Change struct {
 	StreamViewType string `json:"StreamViewType"`
 }
 
-// Record holds the metadata for the dynamodb change
+// Record represents a single DynamoDB stream record containing metadata
+// about a change to an item in the table.
 type Record struct {
 	// AWSRegion update occurred within
 	AWSRegion string `json:"awsRegion"`
@@ -97,13 +110,10 @@ type Record struct {
 	EventVersion string `json:"eventVersion"`
 }
 
-// Event record emitted by dynamodb streams.
-//
-// Motivation:
-// While github.com/aws/aws-lambda-go is a fantastic library for working with lambda in Go,
-// the dynamodb type defined in the Record cannot be unmarshaled by
-// github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute
-//
+// Event represents a DynamoDB stream event that can be processed by AWS Lambda.
+// This type addresses the incompatibility between github.com/aws/aws-lambda-go
+// and github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue, allowing
+// DynamoDB records to be properly unmarshaled.
 type Event struct {
 	// EventSourceARN holds the arn of the resource that generated the record
 	EventSourceARN string `json:"eventSourceARN,omitempty"`
@@ -129,7 +139,8 @@ type Event struct {
 
 var reTableName = regexp.MustCompile(`\d{12}:table/([^/]+)/`)
 
-// TableName returns the table name for a given record
+// TableName extracts and returns the table name from a DynamoDB stream event source ARN.
+// Returns the table name and true if successful, or empty string and false if the ARN format is invalid.
 func TableName(eventSourceARN string) (string, bool) {
 	match := reTableName.FindStringSubmatch(eventSourceARN)
 	if len(match) != 2 {

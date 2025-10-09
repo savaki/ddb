@@ -22,6 +22,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
+// stringPtr returns a pointer to the string value
+func stringPtr(s string) *string {
+	return &s
+}
+
 type Simple struct {
 	Hash  string `ddb:"hash"`
 	Range string `ddb:"range"`

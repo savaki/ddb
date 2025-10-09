@@ -49,7 +49,7 @@ func example() {
 
 ### Models
 
-`ddb` leverages the the `github.com/aws/aws-sdk-go` package for encoding and decoding DynamoDB
+`ddb` leverages the `github.com/aws/aws-sdk-go-v2` package for encoding and decoding DynamoDB
 records to and from structs.  
 
 * Use `dynamodbav` tag option for encoding information

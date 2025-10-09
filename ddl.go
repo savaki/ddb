@@ -24,8 +24,11 @@ import (
 )
 
 const (
-	DefaultBillingMode   = types.BillingModeProvisioned
-	DefaultReadCapacity  = int64(3)
+	// DefaultBillingMode specifies the default billing mode for DynamoDB tables as provisioned capacity
+	DefaultBillingMode = types.BillingModeProvisioned
+	// DefaultReadCapacity specifies the default read capacity units for provisioned tables
+	DefaultReadCapacity = int64(3)
+	// DefaultWriteCapacity specifies the default write capacity units for provisioned tables
 	DefaultWriteCapacity = int64(3)
 )
 
@@ -49,10 +52,12 @@ type tableOptions struct {
 	writeCapacityUnits int64
 }
 
+// TableOption defines an interface for applying configuration options to table creation
 type TableOption interface {
 	ApplyTable(o *tableOptions)
 }
 
+// TableIndexOption defines an interface for options that can be applied to both tables and indexes
 type TableIndexOption interface {
 	TableOption
 }
@@ -63,24 +68,32 @@ func (fn tableIndexFunc) ApplyTable(o *tableOptions) {
 	fn(o)
 }
 
+// WithBillingMode configures the billing mode for a DynamoDB table.
+// Common modes are types.BillingModeProvisioned and types.BillingModePayPerRequest.
 func WithBillingMode(mode types.BillingMode) TableOption {
 	return tableIndexFunc(func(o *tableOptions) {
 		o.billingMode = mode
 	})
 }
 
+// WithReadCapacity sets the read capacity units for provisioned tables and indexes.
+// This setting is only used when billing mode is set to provisioned capacity.
 func WithReadCapacity(rcap int64) TableIndexOption {
 	return tableIndexFunc(func(o *tableOptions) {
 		o.readCapacityUnits = rcap
 	})
 }
 
+// WithStreamSpecification enables DynamoDB streams for the table with the specified view type.
+// Valid values include KEYS_ONLY, NEW_IMAGE, OLD_IMAGE, and NEW_AND_OLD_IMAGES.
 func WithStreamSpecification(streamViewType string) TableOption {
 	return tableIndexFunc(func(o *tableOptions) {
 		o.streamViewType = streamViewType
 	})
 }
 
+// WithWriteCapacity sets the write capacity units for provisioned tables and indexes.
+// This setting is only used when billing mode is set to provisioned capacity.
 func WithWriteCapacity(wcap int64) TableIndexOption {
 	return tableIndexFunc(func(o *tableOptions) {
 		o.writeCapacityUnits = wcap
@@ -265,6 +278,9 @@ func makeCreateTableInput(tableName string, spec *tableSpec, opts ...TableOption
 	return input
 }
 
+// CreateTableIfNotExists creates a DynamoDB table if it does not already exist.
+// If the table already exists, this method returns nil without error.
+// Options can be provided to configure billing mode, capacity, and stream settings.
 func (t *Table) CreateTableIfNotExists(ctx context.Context, opts ...TableOption) error {
 	input := makeCreateTableInput(t.tableName, t.spec, opts...)
 	if _, err := t.ddb.api.CreateTable(ctx, &input); err != nil {
@@ -278,6 +294,8 @@ func (t *Table) CreateTableIfNotExists(ctx context.Context, opts ...TableOption)
 	return nil
 }
 
+// DeleteTableIfExists deletes a DynamoDB table if it exists.
+// If the table does not exist, this method returns nil without error.
 func (t *Table) DeleteTableIfExists(ctx context.Context) error {
 	input := dynamodb.DeleteTableInput{
 		TableName: &t.tableName,

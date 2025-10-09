@@ -26,6 +26,8 @@ type PutAPI interface {
 	PutItem(ctx context.Context, params *dynamodb.PutItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error)
 }
 
+// Put represents a DynamoDB PutItem operation with support for conditions
+// and consumed capacity tracking
 type Put struct {
 	api                                 PutAPI
 	spec                                *tableSpec
@@ -37,6 +39,9 @@ type Put struct {
 	returnValuesOnConditionCheckFailure types.ReturnValuesOnConditionCheckFailure
 }
 
+// Condition adds a condition expression to the put operation.
+// The expression uses placeholders (#field for attribute names, ? for values).
+// Multiple conditions are combined with AND.
 func (p *Put) Condition(expr string, values ...interface{}) *Put {
 	if err := p.expr.Condition(expr, values...); err != nil {
 		p.err = err
@@ -51,6 +56,8 @@ func (p *Put) ConsumedCapacity(capture *ConsumedCapacity) *Put {
 	return p
 }
 
+// PutItemInput constructs and returns the underlying DynamoDB PutItemInput
+// that will be used for the put operation
 func (p *Put) PutItemInput() (*dynamodb.PutItemInput, error) {
 	if p.err != nil {
 		return nil, p.err
@@ -76,11 +83,16 @@ func (p *Put) PutItemInput() (*dynamodb.PutItemInput, error) {
 	return &input, nil
 }
 
+// ReturnValuesOnConditionCheckFailure specifies what values to return when the put condition fails.
+// Valid values are types.ReturnValuesOnConditionCheckFailureNone and types.ReturnValuesOnConditionCheckFailureAllOld.
+// This setting is only used when the put is part of a transaction via Tx().
 func (p *Put) ReturnValuesOnConditionCheckFailure(value types.ReturnValuesOnConditionCheckFailure) *Put {
 	p.returnValuesOnConditionCheckFailure = value
 	return p
 }
 
+// RunWithContext executes the put operation using the provided context.
+// Returns an error if the put fails or if a condition is not met.
 func (p *Put) RunWithContext(ctx context.Context) error {
 	input, err := p.PutItemInput()
 	if err != nil {
@@ -100,10 +112,14 @@ func (p *Put) RunWithContext(ctx context.Context) error {
 	return nil
 }
 
+// Run executes the put operation using the default context.
+// Returns an error if the put fails or if a condition is not met.
 func (p *Put) Run() error {
 	return p.RunWithContext(defaultContext)
 }
 
+// Tx converts the put operation into a TransactWriteItem for use in transactions.
+// Returns an error if the put configuration is invalid.
 func (p *Put) Tx() (*types.TransactWriteItem, error) {
 	input, err := p.PutItemInput()
 	if err != nil {
@@ -126,6 +142,8 @@ func (p *Put) Tx() (*types.TransactWriteItem, error) {
 	return &writeItem, nil
 }
 
+// Put creates a new Put operation to insert or replace the specified item in the table.
+// The item will be marshaled to DynamoDB format automatically.
 func (t *Table) Put(v interface{}) *Put {
 	return &Put{
 		api:   t.ddb.api,

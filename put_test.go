@@ -17,8 +17,7 @@ package ddb
 import (
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 type PutTable struct {
@@ -29,7 +28,7 @@ type PutTable struct {
 func TestPut_Run(t *testing.T) {
 	t.Run("aws err", func(t *testing.T) {
 		var (
-			want  = awserr.New(dynamodb.ErrCodeConditionalCheckFailedException, "boom", nil)
+			want  = &types.ConditionalCheckFailedException{Message: stringPtr("boom")}
 			mock  = &Mock{err: want}
 			db    = New(mock)
 			table = db.MustTable("example", PutTable{})

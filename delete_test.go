@@ -17,8 +17,7 @@ package ddb
 import (
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 type DeleteTable struct {
@@ -71,7 +70,7 @@ func TestDelete_Condition(t *testing.T) {
 
 	t.Run("aws err", func(t *testing.T) {
 		var (
-			original = awserr.New(dynamodb.ErrCodeConditionalCheckFailedException, "boom", nil)
+			original = &types.ConditionalCheckFailedException{Message: stringPtr("boom")}
 			mock     = &Mock{err: original}
 			db       = New(mock)
 			table    = db.MustTable("example", DeleteTable{})

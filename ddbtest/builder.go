@@ -1,9 +1,8 @@
 package ddbtest
 
 import (
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/aws/aws-sdk-go/service/dynamodbstreams"
-	"github.com/savaki/ddb"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
+	"github.com/savaki/ddb/v2"
 )
 
 // EventBuilder defines a minimal implementation of a ddb.Event
@@ -18,7 +17,7 @@ func New() *EventBuilder {
 
 func (b *EventBuilder) Insert(newItem interface{}) *EventBuilder {
 	fn := func() (ddb.Record, error) {
-		newImage, err := dynamodbattribute.MarshalMap(newItem)
+		newImage, err := attributevalue.MarshalMap(newItem)
 		if err != nil {
 			return ddb.Record{}, err
 		}
@@ -27,7 +26,7 @@ func (b *EventBuilder) Insert(newItem interface{}) *EventBuilder {
 			Change: ddb.Change{
 				NewImage: newImage,
 			},
-			EventName: dynamodbstreams.OperationTypeInsert,
+			EventName: ddb.EventNameInsert,
 		}, nil
 	}
 
@@ -38,12 +37,12 @@ func (b *EventBuilder) Insert(newItem interface{}) *EventBuilder {
 
 func (b *EventBuilder) Modify(oldItem, newItem interface{}) *EventBuilder {
 	fn := func() (ddb.Record, error) {
-		newImage, err := dynamodbattribute.MarshalMap(newItem)
+		newImage, err := attributevalue.MarshalMap(newItem)
 		if err != nil {
 			return ddb.Record{}, err
 		}
 
-		oldImage, err := dynamodbattribute.MarshalMap(oldItem)
+		oldImage, err := attributevalue.MarshalMap(oldItem)
 		if err != nil {
 			return ddb.Record{}, err
 		}
@@ -53,7 +52,7 @@ func (b *EventBuilder) Modify(oldItem, newItem interface{}) *EventBuilder {
 				NewImage: newImage,
 				OldImage: oldImage,
 			},
-			EventName: dynamodbstreams.OperationTypeModify,
+			EventName: ddb.EventNameModify,
 		}, nil
 	}
 
@@ -64,7 +63,7 @@ func (b *EventBuilder) Modify(oldItem, newItem interface{}) *EventBuilder {
 
 func (b *EventBuilder) Remove(oldItem interface{}) *EventBuilder {
 	fn := func() (ddb.Record, error) {
-		oldImage, err := dynamodbattribute.MarshalMap(oldItem)
+		oldImage, err := attributevalue.MarshalMap(oldItem)
 		if err != nil {
 			return ddb.Record{}, err
 		}
@@ -73,7 +72,7 @@ func (b *EventBuilder) Remove(oldItem interface{}) *EventBuilder {
 			Change: ddb.Change{
 				OldImage: oldImage,
 			},
-			EventName: dynamodbstreams.OperationTypeRemove,
+			EventName: ddb.EventNameRemove,
 		}, nil
 	}
 

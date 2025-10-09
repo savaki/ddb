@@ -19,7 +19,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"testing"
@@ -138,7 +137,7 @@ func assertEqual(t *testing.T, v interface{}, filename string) {
 
 	// If UPDATE_TESTDATA env var is set, write the new data
 	if os.Getenv("UPDATE_TESTDATA") == "1" {
-		if err := ioutil.WriteFile(filename, data, 0644); err != nil {
+		if err := os.WriteFile(filename, data, 0644); err != nil {
 			t.Fatalf("failed to write testdata: %v", err)
 		}
 		return
@@ -149,7 +148,7 @@ func assertEqual(t *testing.T, v interface{}, filename string) {
 		t.Fatalf("got %v; want nil", err)
 	}
 
-	data, err = ioutil.ReadFile(filename)
+	data, err = os.ReadFile(filename)
 	if err != nil {
 		t.Fatalf("got %v; want nil", err)
 	}
@@ -249,10 +248,7 @@ func TestTable_CreateTableIfNotExists_Live(t *testing.T) {
 
 	cfg, err := config.LoadDefaultConfig(context.Background(),
 		config.WithRegion("us-west-2"),
-		config.WithEndpointResolverWithOptions(aws.EndpointResolverWithOptionsFunc(
-			func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-				return aws.Endpoint{URL: "http://localhost:8000"}, nil
-			})),
+		config.WithBaseEndpoint("http://localhost:8000"),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("blah", "blah", "")),
 	)
 	if err != nil {
@@ -290,6 +286,7 @@ func TestTable_CreateTableIfNotExists_Live(t *testing.T) {
 		if err != nil {
 			t.Fatalf("got %v; want nil", err)
 		}
+		//goland:noinspection GoUnhandledErrorResult
 		defer table.DeleteTableIfExists(ctx)
 
 		want := GSI{
@@ -327,6 +324,7 @@ func TestTable_CreateTableIfNotExists_Live(t *testing.T) {
 		if err != nil {
 			t.Fatalf("got %v; want nil", err)
 		}
+		//goland:noinspection GoUnhandledErrorResult
 		defer table.DeleteTableIfExists(ctx)
 
 		want := GSI{

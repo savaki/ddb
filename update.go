@@ -23,7 +23,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-// Update encapsulates the UpdateItem action
+// Update represents a DynamoDB UpdateItem operation with support for SET, ADD, DELETE, REMOVE
+// expressions, conditions, and consumed capacity tracking
 type Update struct {
 	api                                 DynamoDBAPI
 	spec                                *tableSpec
@@ -51,7 +52,8 @@ func (u *Update) returnValues() (types.ReturnValue, error) {
 	}
 }
 
-// Add updates a number or a set
+// Add increments a number attribute or adds elements to a set attribute.
+// For numbers, adds the specified value. For sets, adds the specified elements.
 func (u *Update) Add(expr string, values ...interface{}) *Update {
 	if err := u.expr.Add(expr, values...); err != nil {
 		u.err = err
@@ -60,8 +62,8 @@ func (u *Update) Add(expr string, values ...interface{}) *Update {
 	return u
 }
 
-// Condition applies a condition to the update.  When called multiple
-// times, the conditions will be and-ed with each other.
+// Condition adds a condition expression to the update operation.
+// Multiple conditions are combined with AND. The update only succeeds if all conditions are met.
 func (u *Update) Condition(expr string, values ...interface{}) *Update {
 	if err := u.expr.Condition(expr, values...); err != nil {
 		u.err = err
@@ -70,12 +72,14 @@ func (u *Update) Condition(expr string, values ...interface{}) *Update {
 	return u
 }
 
+// ConsumedCapacity captures consumed capacity information to the provided variable.
 func (u *Update) ConsumedCapacity(capture *ConsumedCapacity) *Update {
 	u.request = capture
 	return u
 }
 
-// Delete deletes elements from a set
+// Delete removes elements from a set attribute.
+// The specified elements are removed from the set.
 func (u *Update) Delete(expr string, values ...interface{}) *Update {
 	if err := u.expr.Delete(expr, values...); err != nil {
 		u.err = err
@@ -84,7 +88,8 @@ func (u *Update) Delete(expr string, values ...interface{}) *Update {
 	return u
 }
 
-// Tx returns *types.TransactWriteItem suitable for use in a transaction
+// Tx converts the update operation into a TransactWriteItem for use in transactions.
+// Returns an error if the update configuration is invalid.
 func (u *Update) Tx() (*types.TransactWriteItem, error) {
 	input, err := u.UpdateItemInput()
 	if err != nil {
@@ -108,26 +113,31 @@ func (u *Update) Tx() (*types.TransactWriteItem, error) {
 	return &writeItem, nil
 }
 
+// NewValues captures the updated attribute values after the update completes.
+// The provided variable will be populated with the new values.
 func (u *Update) NewValues(v interface{}) *Update {
 	u.newValues = v
 
 	return u
 }
 
-// OldValues captures the old values into the provided value
+// OldValues captures the original attribute values before the update.
+// The provided variable will be populated with the old values.
 func (u *Update) OldValues(v interface{}) *Update {
 	u.oldValues = v
 
 	return u
 }
 
-// Range specifies the optional range key for the update
+// Range specifies the range key value for the item to update.
+// This is required for tables that have a composite primary key.
 func (u *Update) Range(rangeKey interface{}) *Update {
 	u.rangeKey = rangeKey
 	return u
 }
 
-// Remove an attribute from an Item
+// Remove deletes an attribute from the item.
+// The specified attributes are completely removed from the item.
 func (u *Update) Remove(expr string, values ...interface{}) *Update {
 	if err := u.expr.Remove(expr, values...); err != nil {
 		u.err = err
@@ -136,12 +146,16 @@ func (u *Update) Remove(expr string, values ...interface{}) *Update {
 	return u
 }
 
+// ReturnValuesOnConditionCheckFailure specifies what values to return when the update condition fails.
+// Valid values are types.ReturnValuesOnConditionCheckFailureNone and types.ReturnValuesOnConditionCheckFailureAllOld.
+// This setting is only used when the update is part of a transaction via Tx().
 func (u *Update) ReturnValuesOnConditionCheckFailure(value types.ReturnValuesOnConditionCheckFailure) *Update {
 	u.returnValuesOnConditionCheckFailure = value
 	return u
 }
 
-// RunWithContext invokes the update command using the provided context
+// RunWithContext executes the update operation using the provided context.
+// Returns an error if the update fails or if a condition is not met.
 func (u *Update) RunWithContext(ctx context.Context) error {
 	if u.err != nil {
 		return u.err
@@ -177,10 +191,14 @@ func (u *Update) RunWithContext(ctx context.Context) error {
 	return nil
 }
 
+// Run executes the update operation using the default context.
+// Returns an error if the update fails or if a condition is not met.
 func (u *Update) Run() error {
 	return u.RunWithContext(defaultContext)
 }
 
+// Set sets the value of an attribute or creates a new attribute if it doesn't exist.
+// This is the most common update operation for modifying attribute values.
 func (u *Update) Set(expr string, values ...interface{}) *Update {
 	if err := u.expr.Set(expr, values...); err != nil {
 		u.err = err
@@ -189,6 +207,8 @@ func (u *Update) Set(expr string, values ...interface{}) *Update {
 	return u
 }
 
+// UpdateItemInput constructs and returns the underlying DynamoDB UpdateItemInput
+// that will be used for the update operation
 func (u *Update) UpdateItemInput() (*dynamodb.UpdateItemInput, error) {
 	if u.err != nil {
 		return nil, u.err
@@ -222,6 +242,9 @@ func (u *Update) UpdateItemInput() (*dynamodb.UpdateItemInput, error) {
 	}, nil
 }
 
+// Update creates a new Update operation for the item with the specified hash key.
+// Use Range() to specify the range key if the table has a composite primary key.
+// Use Set(), Add(), Remove(), and Delete() to specify the updates.
 func (t *Table) Update(hashKey interface{}) *Update {
 	return &Update{
 		api:     t.ddb.api,

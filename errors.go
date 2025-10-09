@@ -21,10 +21,14 @@ import (
 )
 
 const (
-	ErrInvalidFieldName     = "InvalidFieldName"
-	ErrItemNotFound         = "ItemNotFound"
+	// ErrInvalidFieldName is returned when an invalid field name is specified in an expression
+	ErrInvalidFieldName = "InvalidFieldName"
+	// ErrItemNotFound is returned when a requested item does not exist in the table
+	ErrItemNotFound = "ItemNotFound"
+	// ErrMismatchedValueCount is returned when the number of values doesn't match placeholders in an expression
 	ErrMismatchedValueCount = "MismatchedValueCount"
-	ErrUnableToMarshalItem  = "UnableToMarshalItem"
+	// ErrUnableToMarshalItem is returned when an item cannot be marshaled to DynamoDB format
+	ErrUnableToMarshalItem = "UnableToMarshalItem"
 )
 
 // Error provides a unified error definition that includes a code and message
@@ -70,15 +74,17 @@ func hasError(err error, code string) bool {
 	return false
 }
 
-// IsItemNotFoundError returns true if any error in the cause change contains the code, ErrItemNotFound
+// IsItemNotFoundError returns true if any error in the cause chain contains the code ErrItemNotFound
 func IsItemNotFoundError(err error) bool {
 	return hasError(err, ErrItemNotFound)
 }
 
+// IsMismatchedValueCountError returns true if any error in the cause chain contains the code ErrMismatchedValueCount
 func IsMismatchedValueCountError(err error) bool {
 	return hasError(err, ErrMismatchedValueCount)
 }
 
+// IsInvalidFieldNameError returns true if any error in the cause chain contains the code ErrInvalidFieldName
 func IsInvalidFieldNameError(err error) bool {
 	return hasError(err, ErrInvalidFieldName)
 }

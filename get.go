@@ -27,6 +27,8 @@ type GetAPI interface {
 	GetItem(ctx context.Context, params *dynamodb.GetItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error)
 }
 
+// Get represents a DynamoDB GetItem operation with support for consistent reads
+// and consumed capacity tracking
 type Get struct {
 	api            GetAPI
 	spec           *tableSpec
@@ -68,6 +70,8 @@ func (g getTx) Tx() (*types.TransactGetItem, error) {
 	}, nil
 }
 
+// ConsistentRead enables strongly consistent reads for the get operation.
+// By default, DynamoDB uses eventually consistent reads which may not reflect recent writes.
 func (g *Get) ConsistentRead(enabled bool) *Get {
 	g.consistentRead = true
 	return g
@@ -79,6 +83,8 @@ func (g *Get) ConsumedCapacity(capture *ConsumedCapacity) *Get {
 	return g
 }
 
+// GetItemInput constructs and returns the underlying DynamoDB GetItemInput
+// that will be used for the get operation
 func (g *Get) GetItemInput() (*dynamodb.GetItemInput, error) {
 	key, err := makeKey(g.spec, g.hashKey, g.rangeKey)
 	if err != nil {
@@ -94,11 +100,15 @@ func (g *Get) GetItemInput() (*dynamodb.GetItemInput, error) {
 	}, nil
 }
 
+// Range specifies the range key value for the item to retrieve.
+// This is required for tables that have a composite primary key.
 func (g *Get) Range(value interface{}) *Get {
 	g.rangeKey = value
 	return g
 }
 
+// ScanWithContext retrieves the item and unmarshals it into the provided value using the given context.
+// Returns ErrItemNotFound if the item does not exist.
 func (g *Get) ScanWithContext(ctx context.Context, v interface{}) error {
 	input, err := g.GetItemInput()
 	if err != nil {
@@ -127,10 +137,14 @@ func (g *Get) ScanWithContext(ctx context.Context, v interface{}) error {
 	return nil
 }
 
+// Scan retrieves the item and unmarshals it into the provided value using the default context.
+// Returns ErrItemNotFound if the item does not exist.
 func (g *Get) Scan(v interface{}) error {
 	return g.ScanWithContext(defaultContext, v)
 }
 
+// ScanTx prepares the get operation for use in a transaction.
+// The provided value will be populated when the transaction executes successfully.
 func (g *Get) ScanTx(v interface{}) GetTx {
 	return getTx{
 		get:   g,
@@ -138,6 +152,8 @@ func (g *Get) ScanTx(v interface{}) GetTx {
 	}
 }
 
+// Get creates a new Get operation for the item with the specified hash key.
+// Use Range() to specify the range key if the table has a composite primary key.
 func (t *Table) Get(hashKey interface{}) *Get {
 	return &Get{
 		api:     t.ddb.api,

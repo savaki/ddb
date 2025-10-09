@@ -38,6 +38,9 @@ var (
 	r              = rand.New(rand.NewSource(time.Now().UnixNano()))
 )
 
+// ConsumedCapacity tracks DynamoDB capacity units consumed by operations.
+// It maintains separate counters for read and write capacity units, as well
+// as total capacity units. The struct is safe for concurrent use.
 type ConsumedCapacity struct {
 	mux           sync.Mutex
 	capacityUnits float64
@@ -45,6 +48,10 @@ type ConsumedCapacity struct {
 	WriteUnits    int64
 }
 
+// CapacityUnits returns the total capacity units consumed.
+// This is thread-safe and returns the accumulated capacity units from
+// operations that reported CapacityUnits (as opposed to ReadCapacityUnits
+// or WriteCapacityUnits).
 func (c *ConsumedCapacity) CapacityUnits() float64 {
 	c.mux.Lock()
 	defer c.mux.Unlock()
@@ -80,6 +87,9 @@ func (c *ConsumedCapacity) safeClone() ConsumedCapacity {
 	}
 }
 
+// Table represents a DynamoDB table and provides methods for CRUD operations.
+// It maintains table metadata and tracks consumed capacity for all operations
+// performed on the table.
 type Table struct {
 	ddb       *DDB
 	spec      *tableSpec
@@ -87,10 +97,14 @@ type Table struct {
 	consumed  *ConsumedCapacity
 }
 
+// ConsumedCapacity returns a snapshot of the capacity units consumed by all
+// operations performed on this table. The returned value is a copy and safe
+// to use without synchronization.
 func (t *Table) ConsumedCapacity() ConsumedCapacity {
 	return t.consumed.safeClone()
 }
 
+// DDB returns the underlying DDB instance that created this table.
 func (t *Table) DDB() *DDB {
 	return t.ddb
 }
@@ -110,6 +124,9 @@ type DynamoDBAPI interface {
 	DescribeTable(ctx context.Context, params *dynamodb.DescribeTableInput, optFns ...func(*dynamodb.Options)) (*dynamodb.DescribeTableOutput, error)
 }
 
+// DDB is the main entry point for DynamoDB operations. It wraps the AWS SDK
+// DynamoDB client and provides a higher-level API with automatic schema
+// inspection, expression parsing, and capacity tracking.
 type DDB struct {
 	api        DynamoDBAPI
 	tokenFunc  func() string
@@ -117,6 +134,10 @@ type DDB struct {
 	txTimeout  func(int) time.Duration // txTimeout provides the getTimeout given a duration
 }
 
+// Table creates a Table instance for the specified table name and model.
+// The model parameter should be a struct with DDB tags that define the
+// table's hash key, range key, and indexes. Returns an error if the model
+// cannot be inspected or has invalid schema tags.
 func (d *DDB) Table(tableName string, model interface{}) (*Table, error) {
 	spec, err := inspect(tableName, model)
 	if err != nil {
@@ -131,6 +152,8 @@ func (d *DDB) Table(tableName string, model interface{}) (*Table, error) {
 	}, nil
 }
 
+// MustTable is like Table but panics if there is an error creating the table.
+// Use this for initialization where the model schema is known to be valid.
 func (d *DDB) MustTable(tableName string, model interface{}) *Table {
 	table, err := d.Table(tableName, model)
 	if err != nil {
@@ -294,10 +317,16 @@ loop:
 	return nil, e
 }
 
+// TransactWriteItems executes a transactional write operation with multiple items.
+// This is a convenience wrapper around TransactWriteItemsWithContext using the
+// default context. See TransactWriteItemsWithContext for more details.
 func (d *DDB) TransactWriteItems(items ...WriteTx) (*dynamodb.TransactWriteItemsOutput, error) {
 	return d.TransactWriteItemsWithContext(defaultContext, items...)
 }
 
+// New creates a new DDB instance with the provided DynamoDB API client.
+// The client can be created using dynamodb.NewFromConfig(cfg) where cfg
+// is obtained from config.LoadDefaultConfig().
 func New(api DynamoDBAPI) *DDB {
 	return &DDB{
 		api:        api,

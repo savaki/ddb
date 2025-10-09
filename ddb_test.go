@@ -17,7 +17,7 @@ package ddb
 import (
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
 func TestConsumedCapacity_add(t *testing.T) {
@@ -46,7 +46,7 @@ func TestDDB_TransactWriteItems(t *testing.T) {
 			db    = New(mock)
 			table = db.MustTable("blah", Example{})
 			item  = table.Delete("abc").
-				ReturnValuesOnConditionCheckFailure(dynamodb.ReturnValuesOnConditionCheckFailureNone)
+				ReturnValuesOnConditionCheckFailure(types.ReturnValuesOnConditionCheckFailureNone)
 		)
 
 		db.tokenFunc = func() string { return "def" }
@@ -66,7 +66,7 @@ func TestDDB_TransactWriteItems(t *testing.T) {
 			item  = table.Put(Example{
 				ID:   "abc",
 				Name: "blah",
-			}).ReturnValuesOnConditionCheckFailure(dynamodb.ReturnValuesOnConditionCheckFailureNone)
+			}).ReturnValuesOnConditionCheckFailure(types.ReturnValuesOnConditionCheckFailureNone)
 		)
 
 		db.tokenFunc = func() string { return "def" }
@@ -84,7 +84,7 @@ func TestDDB_TransactWriteItems(t *testing.T) {
 			db    = New(mock)
 			table = db.MustTable("blah", Example{})
 			item  = table.Update("abc").Set("#Name = ?", "def").
-				ReturnValuesOnConditionCheckFailure(dynamodb.ReturnValuesOnConditionCheckFailureNone)
+				ReturnValuesOnConditionCheckFailure(types.ReturnValuesOnConditionCheckFailureNone)
 		)
 
 		db.tokenFunc = func() string { return "def" }

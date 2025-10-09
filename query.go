@@ -26,6 +26,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
+// Query represents a DynamoDB Query operation with support for filtering, pagination,
+// and consumed capacity tracking
 type Query struct {
 	api                DynamoDBAPI
 	spec               *tableSpec
@@ -44,6 +46,9 @@ type Query struct {
 	attributes         []string
 }
 
+// Query creates a new Query operation with the specified key condition expression.
+// The expression uses placeholders (#field for attribute names, ? for values).
+// Use IndexName() to query a secondary index instead of the base table.
 func (t *Table) Query(expr string, values ...interface{}) *Query {
 	query := &Query{
 		api:   t.ddb.api,
@@ -60,15 +65,21 @@ func (q *Query) ConsumedCapacity(capture *ConsumedCapacity) *Query {
 	return q
 }
 
+// ConsistentRead enables strongly consistent reads for the query operation.
+// By default, DynamoDB uses eventually consistent reads which may not reflect recent writes.
 func (q *Query) ConsistentRead(enabled bool) *Query {
 	q.consistentRead = true
 	return q
 }
 
+// Each iterates over all items matching the query, invoking the callback for each.
+// The callback should return true to continue iteration or false to stop.
 func (q *Query) Each(fn func(item Item) (bool, error)) error {
 	return q.EachWithContext(defaultContext, fn)
 }
 
+// EachWithContext iterates over all items matching the query using the provided context.
+// The callback should return true to continue iteration or false to stop.
 func (q *Query) EachWithContext(ctx context.Context, fn func(item Item) (bool, error)) (err error) {
 	if q.err != nil {
 		return q.err
@@ -227,11 +238,15 @@ func (q *Query) FindAllWithContext(ctx context.Context, v interface{}) error {
 	return nil
 }
 
+// IndexName specifies the name of a secondary index to query.
+// If not specified, the query operates on the base table.
 func (q *Query) IndexName(indexName string) *Query {
 	q.indexName = indexName
 	return q
 }
 
+// KeyCondition sets the key condition expression for the query.
+// The expression uses placeholders (#field for attribute names, ? for values).
 func (q *Query) KeyCondition(expr string, values ...interface{}) *Query {
 	if err := q.expr.Condition(expr, values...); err != nil {
 		q.err = err
@@ -246,7 +261,8 @@ func (q *Query) Limit(limit int64) *Query {
 	return q
 }
 
-// QueryInput returns the raw dynamodb QueryInput that will be submitted
+// QueryInput constructs and returns the underlying DynamoDB QueryInput
+// that will be submitted to DynamoDB
 func (q *Query) QueryInput() (*dynamodb.QueryInput, error) {
 	if q.err != nil {
 		return nil, q.err
@@ -284,7 +300,8 @@ func (q *Query) QueryInput() (*dynamodb.QueryInput, error) {
 	return &input, nil
 }
 
-// Select attributes to return; defaults to dynamodb.SelectAllAttributes
+// Select specifies which attributes to return.
+// Defaults to types.SelectAllAttributes if not specified.
 func (q *Query) Select(s types.Select) *Query {
 	q.selectAttributes = s
 	return q
@@ -309,13 +326,15 @@ func (q *Query) ScanIndexForward(enabled bool) *Query {
 	return q
 }
 
-// StartKey assigns the continuation key used for query pagination
+// StartKey sets the exclusive start key for query pagination.
+// Use the last evaluated key from a previous query to continue pagination.
 func (q *Query) StartKey(startKey map[string]types.AttributeValue) *Query {
 	q.startKey = startKey
 	return q
 }
 
-// StartToken encodes start key as a base64 encoded string
+// StartToken sets the exclusive start key using a base64 encoded token.
+// This provides a more portable way to handle pagination than raw keys.
 func (q *Query) StartToken(token string) *Query {
 	if token == "" {
 		return q.StartKey(nil)

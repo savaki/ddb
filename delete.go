@@ -21,6 +21,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
+// Delete represents a DynamoDB DeleteItem operation with support for conditions
+// and consumed capacity tracking
 type Delete struct {
 	api                                 DynamoDBAPI
 	spec                                *tableSpec
@@ -33,6 +35,9 @@ type Delete struct {
 	returnValuesOnConditionCheckFailure types.ReturnValuesOnConditionCheckFailure
 }
 
+// Condition adds a condition expression to the delete operation.
+// The expression uses placeholders (#field for attribute names, ? for values).
+// Multiple conditions are combined with AND.
 func (d *Delete) Condition(expr string, values ...interface{}) *Delete {
 	if err := d.expr.Condition(expr, values...); err != nil {
 		d.err = err
@@ -47,6 +52,8 @@ func (d *Delete) ConsumedCapacity(capture *ConsumedCapacity) *Delete {
 	return d
 }
 
+// DeleteItemInput constructs and returns the underlying DynamoDB DeleteItemInput
+// that will be used for the delete operation
 func (d *Delete) DeleteItemInput() (*dynamodb.DeleteItemInput, error) {
 	if d.err != nil {
 		return nil, d.err
@@ -69,21 +76,23 @@ func (d *Delete) DeleteItemInput() (*dynamodb.DeleteItemInput, error) {
 	}, nil
 }
 
-// Use ReturnValuesOnConditionCheckFailure to get the item attributes if the
-// Delete condition fails. For ReturnValuesOnConditionCheckFailure, the valid
-// values are: NONE and ALL_OLD.
-//
-// Only used by Tx()
+// ReturnValuesOnConditionCheckFailure specifies what values to return when the delete condition fails.
+// Valid values are types.ReturnValuesOnConditionCheckFailureNone and types.ReturnValuesOnConditionCheckFailureAllOld.
+// This setting is only used when the delete is part of a transaction via Tx().
 func (d *Delete) ReturnValuesOnConditionCheckFailure(value types.ReturnValuesOnConditionCheckFailure) *Delete {
 	d.returnValuesOnConditionCheckFailure = value
 	return d
 }
 
+// Range specifies the range key value for the item to delete.
+// This is required for tables that have a composite primary key.
 func (d *Delete) Range(rangeKey interface{}) *Delete {
 	d.rangeKey = rangeKey
 	return d
 }
 
+// RunWithContext executes the delete operation using the provided context.
+// Returns an error if the delete fails or if a condition is not met.
 func (d *Delete) RunWithContext(ctx context.Context) error {
 	input, err := d.DeleteItemInput()
 	if err != nil {
@@ -103,10 +112,14 @@ func (d *Delete) RunWithContext(ctx context.Context) error {
 	return nil
 }
 
+// Run executes the delete operation using the default context.
+// Returns an error if the delete fails or if a condition is not met.
 func (d *Delete) Run() error {
 	return d.RunWithContext(defaultContext)
 }
 
+// Tx converts the delete operation into a TransactWriteItem for use in transactions.
+// Returns an error if the delete configuration is invalid.
 func (d *Delete) Tx() (*types.TransactWriteItem, error) {
 	input, err := d.DeleteItemInput()
 	if err != nil {
@@ -129,6 +142,8 @@ func (d *Delete) Tx() (*types.TransactWriteItem, error) {
 	return &writeItem, nil
 }
 
+// Delete creates a new Delete operation for the item with the specified hash key.
+// Use Range() to specify the range key if the table has a composite primary key.
 func (t *Table) Delete(hashKey interface{}) *Delete {
 	return &Delete{
 		api:     t.ddb.api,
