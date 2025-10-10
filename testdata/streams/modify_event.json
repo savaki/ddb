@@ -1,0 +1,45 @@
+{
+  "Records": [
+    {
+      "eventID": "2",
+      "eventVersion": "1.0",
+      "dynamodb": {
+        "Keys": {
+          "Id": {
+            "N": "101"
+          }
+        },
+        "NewImage": {
+          "Id": {
+            "N": "101"
+          },
+          "Message": {
+            "S": "This item has changed"
+          },
+          "Status": {
+            "S": "updated"
+          }
+        },
+        "OldImage": {
+          "Id": {
+            "N": "101"
+          },
+          "Message": {
+            "S": "New item!"
+          },
+          "Status": {
+            "S": "active"
+          }
+        },
+        "StreamViewType": "NEW_AND_OLD_IMAGES",
+        "SequenceNumber": "222",
+        "SizeBytes": 59,
+        "ApproximateCreationDateTime": 1.428537700E9
+      },
+      "awsRegion": "us-east-1",
+      "eventName": "MODIFY",
+      "eventSourceARN": "arn:aws:dynamodb:us-east-1:123456789012:table/ExampleTableWithStream/stream/2015-06-27T00:48:05.899",
+      "eventSource": "aws:dynamodb"
+    }
+  ]
+}

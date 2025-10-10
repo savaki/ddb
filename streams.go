@@ -63,6 +63,131 @@ type Window struct {
 	End   string `json:"end,omitempty"`
 }
 
+// Image represents a DynamoDB item (a map of attribute names to values).
+// This type properly unmarshals AttributeValue data from JSON stream events.
+type Image map[string]types.AttributeValue
+
+// UnmarshalJSON implements custom JSON unmarshaling for DynamoDB AttributeValue maps.
+func (img *Image) UnmarshalJSON(data []byte) error {
+	// First unmarshal into a generic map structure
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	result := make(map[string]types.AttributeValue, len(raw))
+	for key, value := range raw {
+		av, err := unmarshalAttributeValue(value)
+		if err != nil {
+			return err
+		}
+		result[key] = av
+	}
+	*img = result
+	return nil
+}
+
+// unmarshalAttributeValue converts JSON into a types.AttributeValue
+func unmarshalAttributeValue(data json.RawMessage) (types.AttributeValue, error) {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, err
+	}
+
+	// DynamoDB AttributeValue is a tagged union with keys like "S", "N", "BOOL", etc.
+	for attrType, attrValue := range raw {
+		switch attrType {
+		case "S": // String
+			var s string
+			if err := json.Unmarshal(attrValue, &s); err != nil {
+				return nil, err
+			}
+			return &types.AttributeValueMemberS{Value: s}, nil
+
+		case "N": // Number
+			var n string
+			if err := json.Unmarshal(attrValue, &n); err != nil {
+				return nil, err
+			}
+			return &types.AttributeValueMemberN{Value: n}, nil
+
+		case "B": // Binary
+			var b []byte
+			if err := json.Unmarshal(attrValue, &b); err != nil {
+				return nil, err
+			}
+			return &types.AttributeValueMemberB{Value: b}, nil
+
+		case "SS": // String Set
+			var ss []string
+			if err := json.Unmarshal(attrValue, &ss); err != nil {
+				return nil, err
+			}
+			return &types.AttributeValueMemberSS{Value: ss}, nil
+
+		case "NS": // Number Set
+			var ns []string
+			if err := json.Unmarshal(attrValue, &ns); err != nil {
+				return nil, err
+			}
+			return &types.AttributeValueMemberNS{Value: ns}, nil
+
+		case "BS": // Binary Set
+			var bs [][]byte
+			if err := json.Unmarshal(attrValue, &bs); err != nil {
+				return nil, err
+			}
+			return &types.AttributeValueMemberBS{Value: bs}, nil
+
+		case "M": // Map
+			var m map[string]json.RawMessage
+			if err := json.Unmarshal(attrValue, &m); err != nil {
+				return nil, err
+			}
+			result := make(map[string]types.AttributeValue, len(m))
+			for k, v := range m {
+				av, err := unmarshalAttributeValue(v)
+				if err != nil {
+					return nil, err
+				}
+				result[k] = av
+			}
+			return &types.AttributeValueMemberM{Value: result}, nil
+
+		case "L": // List
+			var l []json.RawMessage
+			if err := json.Unmarshal(attrValue, &l); err != nil {
+				return nil, err
+			}
+			result := make([]types.AttributeValue, len(l))
+			for i, v := range l {
+				av, err := unmarshalAttributeValue(v)
+				if err != nil {
+					return nil, err
+				}
+				result[i] = av
+			}
+			return &types.AttributeValueMemberL{Value: result}, nil
+
+		case "NULL": // Null
+			var null bool
+			if err := json.Unmarshal(attrValue, &null); err != nil {
+				return nil, err
+			}
+			return &types.AttributeValueMemberNULL{Value: null}, nil
+
+		case "BOOL": // Boolean
+			var b bool
+			if err := json.Unmarshal(attrValue, &b); err != nil {
+				return nil, err
+			}
+			return &types.AttributeValueMemberBOOL{Value: b}, nil
+		}
+	}
+
+	return nil, nil
+}
+
 // Change represents a modification to a DynamoDB item, including the keys,
 // old image, and new image of the item.
 type Change struct {
@@ -71,13 +196,13 @@ type Change struct {
 	ApproximateCreationDateTime EpochSeconds `json:"ApproximateCreationDateTime,omitempty"`
 
 	// Keys for dynamodb modified dynamodb item
-	Keys map[string]types.AttributeValue `json:"Keys,omitempty"`
+	Keys Image `json:"Keys,omitempty"`
 
 	// NewImage holds dynamodb item AFTER modification
-	NewImage map[string]types.AttributeValue `json:"NewImage,omitempty"`
+	NewImage Image `json:"NewImage,omitempty"`
 
 	// OldImage holds dynamodb item BEFORE modification
-	OldImage map[string]types.AttributeValue `json:"OldImage,omitempty"`
+	OldImage Image `json:"OldImage,omitempty"`
 
 	// SequenceNumber of stream record
 	SequenceNumber string `json:"SequenceNumber"`
