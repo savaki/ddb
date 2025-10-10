@@ -183,11 +183,90 @@ type Example struct {
 
 #### Using `dynamodbav` to specify attribute values
 
-This example illustrates using the `dynamodbav` in conjunction with the `ddb` to 
-define the schema.  Here the hash key of the table will be set to `id` (not `ID`) 
+This example illustrates using the `dynamodbav` in conjunction with the `ddb` to
+define the schema.  Here the hash key of the table will be set to `id` (not `ID`)
 
 ```golang
 type Example struct {
   ID string `ddb:"hash" dynamodbav:"id"`
 }
 ```
+
+### Testing
+
+The `ddbtest` package provides utilities for testing with DynamoDB tables. The `WithTable` helper manages test resource lifecycle with automatic cleanup.
+
+#### Using WithTable
+
+`WithTable` takes a setup function and a test callback, ensuring cleanup occurs even if the test fails or panics:
+
+```golang
+import (
+    "context"
+    "testing"
+    "github.com/savaki/ddb/v2"
+    "github.com/savaki/ddb/v2/ddbtest"
+)
+
+type User struct {
+    ID   string `ddb:"hash"`
+    Name string
+}
+
+// Define a reusable setup function
+func setupUserTable(t *testing.T) (context.Context, *ddb.Table, func(), error) {
+    ctx := context.Background()
+    cfg, _ := config.LoadDefaultConfig(ctx)
+    api := dynamodb.NewFromConfig(cfg)
+    db := ddb.New(api)
+
+    tableName := "users-" + generateRandomID()
+    table := db.MustTable(tableName, User{})
+
+    err := table.CreateTableIfNotExists(ctx)
+    if err != nil {
+        return nil, nil, nil, err
+    }
+
+    cleanup := func() {
+        table.DeleteTableIfExists(ctx)
+    }
+
+    return ctx, table, cleanup, nil
+}
+
+func TestUserOperations(t *testing.T) {
+    ddbtest.WithTable(t, setupUserTable, func(t *testing.T, ctx context.Context, table *ddb.Table) {
+        // Your test logic here
+        user := User{ID: "123", Name: "Alice"}
+
+        err := table.Put(user).RunWithContext(ctx)
+        if err != nil {
+            t.Fatalf("failed to put user: %v", err)
+        }
+
+        var got User
+        err = table.Get(ddb.String("123")).ScanWithContext(ctx, &got)
+        if err != nil {
+            t.Fatalf("failed to get user: %v", err)
+        }
+
+        if got.Name != "Alice" {
+            t.Errorf("expected name 'Alice', got '%s'", got.Name)
+        }
+
+        // Table cleanup happens automatically after this function returns
+    })
+}
+```
+
+The setup function returns:
+- `ctx`: A context for the test
+- `data`: Test-specific data (e.g., `*ddb.Table`, table name, etc.)
+- `cleanup`: A function to clean up resources (called via `defer`)
+- `err`: Any error that occurred during setup
+
+This pattern ensures:
+- Resources are properly cleaned up even if tests fail
+- Setup code is reusable across multiple tests
+- Test isolation through automatic teardown
