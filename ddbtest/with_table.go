@@ -34,7 +34,7 @@ type Callback[T any] func(t *testing.T, ctx context.Context, data T)
 //	    }
 //	    return ctx, table, cleanup, nil
 //	}
-type Setup[T any] func(t *testing.T) (ctx context.Context, data T, cleanup func(), err error)
+type Setup[T any] func(t *testing.T) (ctx context.Context, data T, cleanup func())
 
 // WithTable is a test helper that manages the lifecycle of test resources with automatic cleanup.
 // It executes the setup function, runs the test callback with the provided data, and ensures
@@ -60,11 +60,7 @@ type Setup[T any] func(t *testing.T) (ctx context.Context, data T, cleanup func(
 //	    assert.NoError(t, err)
 //	})
 func WithTable[T any](t *testing.T, setup Setup[T], callback Callback[T]) {
-	ctx, data, cleanup, err := setup(t)
-	if err != nil {
-		t.Fatalf("setup failed: %v", err)
-		return
-	}
+	ctx, data, cleanup := setup(t)
 	defer cleanup()
 
 	callback(t, ctx, data)

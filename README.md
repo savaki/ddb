@@ -214,7 +214,7 @@ type User struct {
 }
 
 // Define a reusable setup function
-func setupUserTable(t *testing.T) (context.Context, *ddb.Table, func(), error) {
+func setupUserTable(t *testing.T) (context.Context, *ddb.Table, func()) {
     ctx := context.Background()
     cfg, _ := config.LoadDefaultConfig(ctx)
     api := dynamodb.NewFromConfig(cfg)
@@ -223,16 +223,15 @@ func setupUserTable(t *testing.T) (context.Context, *ddb.Table, func(), error) {
     tableName := "users-" + generateRandomID()
     table := db.MustTable(tableName, User{})
 
-    err := table.CreateTableIfNotExists(ctx)
-    if err != nil {
-        return nil, nil, nil, err
+    if err := table.CreateTableIfNotExists(ctx); err != nil {
+        t.Fatalf("failed to create table: %v", err)
     }
 
     cleanup := func() {
         table.DeleteTableIfExists(ctx)
     }
 
-    return ctx, table, cleanup, nil
+    return ctx, table, cleanup
 }
 
 func TestUserOperations(t *testing.T) {
@@ -264,7 +263,6 @@ The setup function returns:
 - `ctx`: A context for the test
 - `data`: Test-specific data (e.g., `*ddb.Table`, table name, etc.)
 - `cleanup`: A function to clean up resources (called via `defer`)
-- `err`: Any error that occurred during setup
 
 This pattern ensures:
 - Resources are properly cleaned up even if tests fail

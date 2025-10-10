@@ -13,7 +13,7 @@ type TestData struct {
 
 // setupTestData creates a reusable test setup function
 func setupTestData(cleanupCalled *bool) Setup[TestData] {
-	return func(t *testing.T) (context.Context, TestData, func(), error) {
+	return func(t *testing.T) (context.Context, TestData, func()) {
 		ctx := context.Background()
 		data := TestData{
 			TableName: "test-table",
@@ -22,41 +22,41 @@ func setupTestData(cleanupCalled *bool) Setup[TestData] {
 		cleanup := func() {
 			*cleanupCalled = true
 		}
-		return ctx, data, cleanup, nil
+		return ctx, data, cleanup
 	}
 }
 
 // setupPanicTest creates a setup for panic testing
 func setupPanicTest(cleanupCalled *bool) Setup[TestData] {
-	return func(t *testing.T) (context.Context, TestData, func(), error) {
+	return func(t *testing.T) (context.Context, TestData, func()) {
 		ctx := context.Background()
 		data := TestData{TableName: "panic-table"}
 		cleanup := func() {
 			*cleanupCalled = true
 		}
-		return ctx, data, cleanup, nil
+		return ctx, data, cleanup
 	}
 }
 
 // setupString creates a setup that returns string data
 func setupString(cleanupCalled *bool) Setup[string] {
-	return func(t *testing.T) (context.Context, string, func(), error) {
-		return context.Background(), "table-name", func() { *cleanupCalled = true }, nil
+	return func(t *testing.T) (context.Context, string, func()) {
+		return context.Background(), "table-name", func() { *cleanupCalled = true }
 	}
 }
 
 // setupInt creates a setup that returns int data
 func setupInt(cleanupCalled *bool) Setup[int] {
-	return func(t *testing.T) (context.Context, int, func(), error) {
-		return context.Background(), 42, func() { *cleanupCalled = true }, nil
+	return func(t *testing.T) (context.Context, int, func()) {
+		return context.Background(), 42, func() { *cleanupCalled = true }
 	}
 }
 
 // setupPointer creates a setup that returns pointer data
 func setupPointer(cleanupCalled *bool) Setup[*TestData] {
-	return func(t *testing.T) (context.Context, *TestData, func(), error) {
+	return func(t *testing.T) (context.Context, *TestData, func()) {
 		data := &TestData{TableName: "ptr-table", ItemCount: 10}
-		return context.Background(), data, func() { *cleanupCalled = true }, nil
+		return context.Background(), data, func() { *cleanupCalled = true }
 	}
 }
 
