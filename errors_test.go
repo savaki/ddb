@@ -17,6 +17,8 @@ package ddb
 import (
 	"io"
 	"testing"
+
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 )
 
 func TestIsItemNotFoundError(t *testing.T) {
@@ -83,6 +85,15 @@ func TestUnwrap(t *testing.T) {
 func TestIsInvalidFieldNameError(t *testing.T) {
 	got := IsInvalidFieldNameError(&baseError{
 		code: ErrInvalidFieldName,
+	})
+	if got != true {
+		t.Fatalf("got false; want true")
+	}
+}
+
+func TestIsConditionalCheckFailedException(t *testing.T) {
+	got := IsConditionalCheckFailedException(&baseError{
+		code: dynamodb.ErrCodeConditionalCheckFailedException,
 	})
 	if got != true {
 		t.Fatalf("got false; want true")
