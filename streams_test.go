@@ -16,8 +16,11 @@ package ddb
 
 import (
 	"encoding/json"
+	"os"
 	"testing"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 )
 
 func TestTableName(t *testing.T) {
@@ -125,6 +128,188 @@ func TestEpochSeconds_JSON(t *testing.T) {
 		}
 		if want := EpochSeconds(0); got.Unix != want {
 			t.Fatalf("got %v; want %v", got, want)
+		}
+	})
+}
+
+func TestEvent_Unmarshal(t *testing.T) {
+	testCases := []struct {
+		name     string
+		filename string
+	}{
+		{
+			name:     "insert",
+			filename: "testdata/streams/insert_event.json",
+		},
+		{
+			name:     "modify",
+			filename: "testdata/streams/modify_event.json",
+		},
+		{
+			name:     "remove",
+			filename: "testdata/streams/remove_event.json",
+		},
+		{
+			name:     "multiple_records",
+			filename: "testdata/streams/multiple_records.json",
+		},
+		{
+			name:     "keys_only",
+			filename: "testdata/streams/keys_only_event.json",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			data, err := os.ReadFile(tc.filename)
+			if err != nil {
+				t.Fatalf("failed to read file: %v", err)
+			}
+
+			var event Event
+			err = json.Unmarshal(data, &event)
+			if err != nil {
+				t.Fatalf("failed to unmarshal: %v", err)
+			}
+
+			if len(event.Records) == 0 {
+				t.Fatal("expected at least one record")
+			}
+
+			// Verify basic structure
+			for i, record := range event.Records {
+				if record.EventID == "" {
+					t.Errorf("record %d: missing EventID", i)
+				}
+				if record.EventName == "" {
+					t.Errorf("record %d: missing EventName", i)
+				}
+				if record.EventSource == "" {
+					t.Errorf("record %d: missing EventSource", i)
+				}
+				if record.AWSRegion == "" {
+					t.Errorf("record %d: missing AWSRegion", i)
+				}
+				if record.Change.SequenceNumber == "" {
+					t.Errorf("record %d: missing SequenceNumber", i)
+				}
+			}
+		})
+	}
+}
+
+func TestImage_UnmarshalMap(t *testing.T) {
+	t.Run("unmarshal NewImage from insert event", func(t *testing.T) {
+		data, err := os.ReadFile("testdata/streams/insert_event.json")
+		if err != nil {
+			t.Fatalf("failed to read file: %v", err)
+		}
+
+		var event Event
+		err = json.Unmarshal(data, &event)
+		if err != nil {
+			t.Fatalf("failed to unmarshal event: %v", err)
+		}
+
+		if len(event.Records) == 0 {
+			t.Fatal("expected at least one record")
+		}
+
+		// Test unmarshaling into a struct
+		type TestItem struct {
+			Id      int    `dynamodbav:"Id"`
+			Message string `dynamodbav:"Message"`
+			Status  string `dynamodbav:"Status"`
+		}
+
+		var item TestItem
+		err = attributevalue.UnmarshalMap(event.Records[0].Change.NewImage, &item)
+		if err != nil {
+			t.Fatalf("failed to unmarshal map: %v", err)
+		}
+
+		// Verify the unmarshaled values
+		if item.Id != 101 {
+			t.Errorf("expected Id = 101, got %d", item.Id)
+		}
+		if item.Message != "New item!" {
+			t.Errorf("expected Message = 'New item!', got '%s'", item.Message)
+		}
+		if item.Status != "active" {
+			t.Errorf("expected Status = 'active', got '%s'", item.Status)
+		}
+	})
+
+	t.Run("unmarshal OldImage from modify event", func(t *testing.T) {
+		data, err := os.ReadFile("testdata/streams/modify_event.json")
+		if err != nil {
+			t.Fatalf("failed to read file: %v", err)
+		}
+
+		var event Event
+		err = json.Unmarshal(data, &event)
+		if err != nil {
+			t.Fatalf("failed to unmarshal event: %v", err)
+		}
+
+		type TestItem struct {
+			Id      int    `dynamodbav:"Id"`
+			Message string `dynamodbav:"Message"`
+			Status  string `dynamodbav:"Status"`
+		}
+
+		var oldItem TestItem
+		err = attributevalue.UnmarshalMap(event.Records[0].Change.OldImage, &oldItem)
+		if err != nil {
+			t.Fatalf("failed to unmarshal old image: %v", err)
+		}
+
+		if oldItem.Message != "New item!" {
+			t.Errorf("expected OldImage Message = 'New item!', got '%s'", oldItem.Message)
+		}
+
+		var newItem TestItem
+		err = attributevalue.UnmarshalMap(event.Records[0].Change.NewImage, &newItem)
+		if err != nil {
+			t.Fatalf("failed to unmarshal new image: %v", err)
+		}
+
+		if newItem.Message != "This item has changed" {
+			t.Errorf("expected NewImage Message = 'This item has changed', got '%s'", newItem.Message)
+		}
+		if newItem.Status != "updated" {
+			t.Errorf("expected NewImage Status = 'updated', got '%s'", newItem.Status)
+		}
+	})
+
+	t.Run("unmarshal Keys", func(t *testing.T) {
+		data, err := os.ReadFile("testdata/streams/keys_only_event.json")
+		if err != nil {
+			t.Fatalf("failed to read file: %v", err)
+		}
+
+		var event Event
+		err = json.Unmarshal(data, &event)
+		if err != nil {
+			t.Fatalf("failed to unmarshal event: %v", err)
+		}
+
+		type KeyStruct struct {
+			UserId    string `dynamodbav:"UserId"`
+			Timestamp int64  `dynamodbav:"Timestamp"`
+		}
+
+		var keys KeyStruct
+		err = attributevalue.UnmarshalMap(event.Records[0].Change.Keys, &keys)
+		if err != nil {
+			t.Fatalf("failed to unmarshal keys: %v", err)
+		}
+
+		if keys.UserId != "user123" {
+			t.Errorf("expected UserId = 'user123', got '%s'", keys.UserId)
+		}
+		if keys.Timestamp != 1590277509 {
+			t.Errorf("expected Timestamp = 1590277509, got %d", keys.Timestamp)
 		}
 	})
 }

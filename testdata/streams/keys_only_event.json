@@ -1,0 +1,26 @@
+{
+  "Records": [
+    {
+      "eventID": "6",
+      "eventVersion": "1.0",
+      "dynamodb": {
+        "Keys": {
+          "UserId": {
+            "S": "user123"
+          },
+          "Timestamp": {
+            "N": "1590277509"
+          }
+        },
+        "StreamViewType": "KEYS_ONLY",
+        "SequenceNumber": "666",
+        "SizeBytes": 15,
+        "ApproximateCreationDateTime": 1.590277509E9
+      },
+      "awsRegion": "eu-west-1",
+      "eventName": "MODIFY",
+      "eventSourceARN": "arn:aws:dynamodb:eu-west-1:123456789012:table/Activity/stream/2020-05-23T23:45:09.000",
+      "eventSource": "aws:dynamodb"
+    }
+  ]
+}

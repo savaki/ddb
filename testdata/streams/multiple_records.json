@@ -1,0 +1,64 @@
+{
+  "Records": [
+    {
+      "eventID": "4",
+      "eventVersion": "1.0",
+      "dynamodb": {
+        "Keys": {
+          "Id": {
+            "N": "201"
+          }
+        },
+        "NewImage": {
+          "Id": {
+            "N": "201"
+          },
+          "Name": {
+            "S": "Alice"
+          },
+          "Age": {
+            "N": "30"
+          }
+        },
+        "StreamViewType": "NEW_AND_OLD_IMAGES",
+        "SequenceNumber": "444",
+        "SizeBytes": 34,
+        "ApproximateCreationDateTime": 1.590277509E9
+      },
+      "awsRegion": "us-east-1",
+      "eventName": "INSERT",
+      "eventSourceARN": "arn:aws:dynamodb:us-east-1:123456789012:table/Users/stream/2020-05-23T23:45:09.000",
+      "eventSource": "aws:dynamodb"
+    },
+    {
+      "eventID": "5",
+      "eventVersion": "1.0",
+      "dynamodb": {
+        "Keys": {
+          "Id": {
+            "N": "202"
+          }
+        },
+        "NewImage": {
+          "Id": {
+            "N": "202"
+          },
+          "Name": {
+            "S": "Bob"
+          },
+          "Age": {
+            "N": "25"
+          }
+        },
+        "StreamViewType": "NEW_AND_OLD_IMAGES",
+        "SequenceNumber": "555",
+        "SizeBytes": 32,
+        "ApproximateCreationDateTime": 1.590277510E9
+      },
+      "awsRegion": "us-east-1",
+      "eventName": "INSERT",
+      "eventSourceARN": "arn:aws:dynamodb:us-east-1:123456789012:table/Users/stream/2020-05-23T23:45:09.000",
+      "eventSource": "aws:dynamodb"
+    }
+  ]
+}
