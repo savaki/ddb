@@ -202,7 +202,7 @@ func makeCreateTableInput(tableName string, spec *tableSpec, opts ...TableOption
 	for _, item := range spec.Locals {
 		lsi := dynamodb.LocalSecondaryIndex{
 			IndexName: aws.String(item.IndexName),
-			KeySchema: makeKeySchemaElements(item.HashKey, item.RangeKey),
+			KeySchema: makeKeySchemaElements(spec.HashKey, item.RangeKey),
 		}
 		if len(item.Attributes) == 0 {
 			if item.KeysOnly {

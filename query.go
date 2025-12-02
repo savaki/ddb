@@ -74,20 +74,26 @@ func (q *Query) EachWithContext(ctx context.Context, fn func(item Item) (bool, e
 		return q.err
 	}
 
+	// lastSeenKey tracks the key of the last item the user actually processed.
+	// This may differ from DynamoDB's LastEvaluatedKey when:
+	// 1. The user stops iteration early (callback returns false)
+	// 2. We're buffering results with Limit
+	var lastSeenKey map[string]*dynamodb.AttributeValue
 	startKey := q.startKey
+
 	defer func() {
 		if q.lastEvaluatedKey != nil {
-			*q.lastEvaluatedKey = startKey
+			*q.lastEvaluatedKey = lastSeenKey
 		}
 		if q.lastEvaluatedToken != nil {
 			switch {
-			case len(startKey) == 0:
+			case len(lastSeenKey) == 0:
 				*q.lastEvaluatedToken = ""
 
 			default:
-				data, e := json.Marshal(startKey)
+				data, e := json.Marshal(lastSeenKey)
 				if e != nil {
-					err = fmt.Errorf("failed to marshal startKey: %w", err)
+					err = fmt.Errorf("failed to marshal lastSeenKey: %w", err)
 				}
 				*q.lastEvaluatedToken = base64.StdEncoding.EncodeToString(data)
 			}
@@ -115,6 +121,8 @@ func (q *Query) EachWithContext(ctx context.Context, fn func(item Item) (bool, e
 			if err != nil {
 				return err
 			}
+			// Update lastSeenKey after successful callback
+			lastSeenKey = q.extractKey(rawItem)
 			if !ok {
 				return nil
 			}
@@ -126,6 +134,8 @@ func (q *Query) EachWithContext(ctx context.Context, fn func(item Item) (bool, e
 		}
 
 		if startKey == nil {
+			// No more items available - clear lastSeenKey to indicate pagination complete
+			lastSeenKey = nil
 			break
 		}
 		if q.limit > 0 {
@@ -324,4 +334,61 @@ func (q *Query) StartToken(token string) *Query {
 	}
 
 	return q.StartKey(startKey)
+}
+
+// extractKey extracts the key attributes from a raw DynamoDB item.
+// The key structure depends on whether we're querying the main table or an index:
+// - Main table: hash key + range key (if present)
+// - GSI: GSI hash key + GSI range key + table hash key + table range key
+// - LSI: table hash key + LSI range key
+func (q *Query) extractKey(item map[string]*dynamodb.AttributeValue) map[string]*dynamodb.AttributeValue {
+	key := make(map[string]*dynamodb.AttributeValue)
+
+	// Always include the table's hash key
+	if q.spec.HashKey != nil {
+		if v, ok := item[q.spec.HashKey.AttributeName]; ok {
+			key[q.spec.HashKey.AttributeName] = v
+		}
+	}
+
+	// Include the table's range key if present
+	if q.spec.RangeKey != nil {
+		if v, ok := item[q.spec.RangeKey.AttributeName]; ok {
+			key[q.spec.RangeKey.AttributeName] = v
+		}
+	}
+
+	// If querying an index, include the index's key attributes
+	if q.indexName != "" {
+		// Check GSIs
+		for _, gsi := range q.spec.Globals {
+			if gsi.IndexName == q.indexName {
+				if gsi.HashKey != nil {
+					if v, ok := item[gsi.HashKey.AttributeName]; ok {
+						key[gsi.HashKey.AttributeName] = v
+					}
+				}
+				if gsi.RangeKey != nil {
+					if v, ok := item[gsi.RangeKey.AttributeName]; ok {
+						key[gsi.RangeKey.AttributeName] = v
+					}
+				}
+				break
+			}
+		}
+
+		// Check LSIs
+		for _, lsi := range q.spec.Locals {
+			if lsi.IndexName == q.indexName {
+				if lsi.RangeKey != nil {
+					if v, ok := item[lsi.RangeKey.AttributeName]; ok {
+						key[lsi.RangeKey.AttributeName] = v
+					}
+				}
+				break
+			}
+		}
+	}
+
+	return key
 }

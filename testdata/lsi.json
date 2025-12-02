@@ -34,6 +34,10 @@
       "IndexName": "index",
       "KeySchema": [
         {
+          "AttributeName": "Hash",
+          "KeyType": "HASH"
+        },
+        {
           "AttributeName": "alt",
           "KeyType": "RANGE"
         }
